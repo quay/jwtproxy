@@ -20,30 +20,31 @@ import (
 	"github.com/coreos-inc/hmacproxy/config"
 )
 
-type CredentialStoreConstructor func(*config.CredentialSourceConfig) (CredentialStore, error)
+// StoreConstructor is a function which is capable of instantiating a Store.
+type StoreConstructor func(*config.CredentialSourceConfig) (Store, error)
 
-var storeFactories = make(map[string]CredentialStoreConstructor)
+var storeFactories = make(map[string]StoreConstructor)
 
-// RegisterNotifier makes a Fetcher available by the provided name.
-// If Register is called twice with the same name or if driver is nil,
-// it panics.
-func RegisterCredentialStoreFacory(name string, csf func(*config.CredentialSourceConfig) (CredentialStore, error)) {
+// RegisterStoreConstructor allows one to register a new type of Store.
+func RegisterStoreConstructor(name string, csf func(*config.CredentialSourceConfig) (Store, error)) {
 	if name == "" {
-		panic("credentials: could not register a CredentialStore with an empty name")
+		panic("credentials: could not register a Store with an empty name")
 	}
 
 	if csf == nil {
-		panic("credentials: could not register a nil CredentialStore")
+		panic("credentials: could not register a nil Store")
 	}
 
 	if _, dup := storeFactories[name]; dup {
-		panic("credentials: RegisterCredentialStore called twice for " + name)
+		panic("credentials: RegisterStore called twice for " + name)
 	}
 
 	storeFactories[name] = csf
 }
 
-func CreateCredentialStore(cfg *config.CredentialSourceConfig) (cs CredentialStore, err error) {
+// NewStore instantiates and configures a new Store object using the specified
+// configuration.
+func NewStore(cfg *config.CredentialSourceConfig) (cs Store, err error) {
 	constructor, found := storeFactories[cfg.Type]
 	if !found {
 		err = fmt.Errorf("credentials: Unable to find credential store constructor for %s", cfg.Type)
@@ -54,6 +55,8 @@ func CreateCredentialStore(cfg *config.CredentialSourceConfig) (cs CredentialSto
 	return
 }
 
-type CredentialStore interface {
+// Store is an interface for loading a Credential from a configurable data
+// source.
+type Store interface {
 	LoadCredential(keyID, serviceName, regionName string) (*Credential, error)
 }

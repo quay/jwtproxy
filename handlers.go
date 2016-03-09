@@ -23,7 +23,9 @@ import (
 	"github.com/coreos-inc/hmacproxy/credential"
 )
 
-func CreateSigningProxy(target *url.URL, cred credential.Credential) (*httputil.ReverseProxy, error) {
+// NewSigningProxy instantiates a new signing proxy with the target url and the
+// statc credential specified.
+func NewSigningProxy(target *url.URL, cred credential.Credential) (*httputil.ReverseProxy, error) {
 	director := func(req *http.Request) {
 		log.Printf("Proxying request %v", req)
 		req.URL.Scheme = target.Scheme
@@ -32,11 +34,14 @@ func CreateSigningProxy(target *url.URL, cred credential.Credential) (*httputil.
 	return &httputil.ReverseProxy{Director: director}, nil
 }
 
-func CreateVerifyingProxy(target *url.URL, cs credential.CredentialStore) (*httputil.ReverseProxy, error) {
+// NewVerifyingProxy instantiates a new verifying proxy with the specified
+// upstream URL and credential store, which will be used to verify incoming
+// requests.
+func NewVerifyingProxy(upstream *url.URL, cs credential.Store) (*httputil.ReverseProxy, error) {
 	director := func(req *http.Request) {
 		log.Printf("Proxying request %v", req)
-		req.URL.Scheme = target.Scheme
-		req.URL.Host = target.Host
+		req.URL.Scheme = upstream.Scheme
+		req.URL.Host = upstream.Host
 	}
 	return &httputil.ReverseProxy{Director: director}, nil
 }

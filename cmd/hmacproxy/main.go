@@ -63,7 +63,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		signingProxy, err := hmacproxy.CreateSigningProxy(signingDest, signingCredential)
+		signingProxy, err := hmacproxy.NewSigningProxy(signingDest, signingCredential)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -78,12 +78,12 @@ func main() {
 			proxyConfig.Verifier.Upstream,
 		)
 
-		cs, err := credential.CreateCredentialStore(proxyConfig.Verifier.CredentialSource)
+		cs, err := credential.NewStore(proxyConfig.Verifier.CredentialSource)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		verificationProxy, err := hmacproxy.CreateVerifyingProxy(proxyConfig.Verifier.Upstream.URL, cs)
+		verificationProxy, err := hmacproxy.NewVerifyingProxy(proxyConfig.Verifier.Upstream.URL, cs)
 		if err != nil {
 			log.Fatal(err)
 		}
