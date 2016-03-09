@@ -86,7 +86,7 @@ func Sign4(req *http.Request, cred credential.Credential) error {
 // service names. The maxSkew duration represents the time window within a signed request stays
 // valid. Verify4 returns true if the http.Request has been verified successfully, otherwise
 // the returned error contains the failure reason.
-func Verify4(req *http.Request, creds credential.CredentialStore, maxSkew time.Duration) (bool, error) {
+func Verify4(req *http.Request, creds credential.Store, maxSkew time.Duration) (bool, error) {
 	// Shallow copy the request as we're going to modify its headers,
 	// and make its Body a ReadSeekerCloser as AWS going to read it and http.Request must be able to
 	// Close() it.

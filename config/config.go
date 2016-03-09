@@ -52,22 +52,25 @@ func (u URL) MarshalYAML() (interface{}, error) {
 	return nil, nil
 }
 
-// Config is the global configuration
+// Represents a config file, which may have configuration for other programs
+// as a top level key.
 type configFile struct {
 	HmacProxy *Config
 }
 
+// Config is the global configuration
 type Config struct {
 	Signer   *SignerConfig
 	Verifier *VerifierConfig
 }
 
-// Configuration used to enable and configure the signing half of the proxy
+// SignerConfig is used to enable and configure the signing half of the proxy.
 type SignerConfig struct {
 	ListenerAddr string
 	Key          *HMACKey
 }
 
+// HMACKey represents a single hard coded credential.
 type HMACKey struct {
 	ID      string
 	Secret  string
@@ -75,7 +78,8 @@ type HMACKey struct {
 	Service string
 }
 
-// Configuration used to enable and configure the verifier half of the proxy
+// VerifierConfig is used to enable and configure the verifier half of the
+// proxy.
 type VerifierConfig struct {
 	ListenerAddr     string
 	Upstream         URL
@@ -84,8 +88,8 @@ type VerifierConfig struct {
 	CredentialSource *CredentialSourceConfig
 }
 
-// Configuration which when specified enables TLS(SSL), and optionally requires
-// the use of client certificates
+// TLSConfig enables TLS(SSL) when specified, and optionally requires the use
+// of client certificates.
 type TLSConfig struct {
 	CertFile                 string
 	KeyFile                  string
@@ -93,7 +97,8 @@ type TLSConfig struct {
 	RequireClientCertificate string
 }
 
-// Configuration options for a verifier credential source
+// CredentialSourceConfig specified a credential source and the options
+// required to instantiate it.
 type CredentialSourceConfig struct {
 	Type    string
 	Options map[string]interface{} `yaml:",inline"`

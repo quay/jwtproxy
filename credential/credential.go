@@ -14,6 +14,8 @@
 
 package credential
 
+// Credential represents a single identity used for signing or verifying
+// requests.
 type Credential struct {
 	ID      string
 	Secret  string

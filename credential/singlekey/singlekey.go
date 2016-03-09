@@ -23,23 +23,23 @@ import (
 	"github.com/coreos-inc/hmacproxy/credential"
 )
 
-type SingleAccessKey struct {
+type singleAccessKey struct {
 	credential.Credential
 }
 
-func (s SingleAccessKey) LoadCredential(keyID, serviceName, regionName string) (*credential.Credential, error) {
+func (s singleAccessKey) LoadCredential(keyID, serviceName, regionName string) (*credential.Credential, error) {
 	if keyID != s.ID || serviceName != s.Service || regionName != s.Region {
 		return nil, fmt.Errorf("Unknown key with key id: %s", keyID)
 	}
 	return &s.Credential, nil
 }
 
-func constructor(cfg *config.CredentialSourceConfig) (credential.CredentialStore, error) {
+func constructor(cfg *config.CredentialSourceConfig) (credential.Store, error) {
 	reserialized, err := yaml.Marshal(cfg.Options)
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshall configuration: %v", cfg.Options)
 	}
-	var parsed SingleAccessKey
+	var parsed singleAccessKey
 	err = yaml.Unmarshal(reserialized, &parsed)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse configuration: %v", reserialized)
@@ -48,5 +48,5 @@ func constructor(cfg *config.CredentialSourceConfig) (credential.CredentialStore
 }
 
 func init() {
-	credential.RegisterCredentialStoreFacory("SingleCredential", constructor)
+	credential.RegisterStoreConstructor("SingleCredential", constructor)
 }
