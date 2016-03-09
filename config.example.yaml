@@ -1,7 +1,10 @@
 hmacproxy:
   signer:
-    keyid: 123abc
-    keysecret: 123abc456def
+    key:
+      id: 123abc
+      secret: 123abc456def
+      region: quay
+      service: clair
     listeneraddr: ":8080"
   verifier:
     upstream: http://localhost:6060
@@ -16,3 +19,5 @@ hmacproxy:
       options:
         keyid: 123abc
         keysecret: 123abc456def
+        keyregion: quay
+        service: quay

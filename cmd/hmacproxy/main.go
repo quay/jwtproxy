@@ -47,7 +47,12 @@ func main() {
 	if proxyConfig.Signer != nil {
 		log.Infof("Starting signing proxy on: %s", proxyConfig.Signer.ListenerAddr)
 
-		signingCredential := hmacproxy.SingleAccessKey{proxyConfig.Signer.KeyId, proxyConfig.Signer.KeySecret}
+		signingCredential := hmacproxy.SingleAccessKey{
+			proxyConfig.Signer.Key.ID,
+			proxyConfig.Signer.Key.Secret,
+			proxyConfig.Signer.Key.Service,
+			proxyConfig.Signer.Key.Region,
+		}
 
 		signingDest, err := url.Parse("https://www.google.com")
 		if err != nil {
@@ -63,8 +68,17 @@ func main() {
 	}
 
 	if proxyConfig.Verifier != nil {
-		log.Infof("Starting verification proxy listening on: %s with upstream: %v", proxyConfig.Verifier.ListenerAddr, proxyConfig.Verifier.Upstream)
-		tmpCred := hmacproxy.SingleAccessKey{proxyConfig.Signer.KeyId, proxyConfig.Signer.KeySecret}
+		log.Infof(
+			"Starting verification proxy listening on: %s with upstream: %v",
+			proxyConfig.Verifier.ListenerAddr,
+			proxyConfig.Verifier.Upstream,
+		)
+		tmpCred := hmacproxy.SingleAccessKey{
+			proxyConfig.Signer.Key.ID,
+			proxyConfig.Signer.Key.Secret,
+			proxyConfig.Signer.Key.Service,
+			proxyConfig.Signer.Key.Region,
+		}
 		verificationProxy, err := hmacproxy.CreateVerifyingProxy(proxyConfig.Verifier.Upstream.URL, tmpCred)
 		if err != nil {
 			log.Fatal(err)
