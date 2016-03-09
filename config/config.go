@@ -16,11 +16,12 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"time"
+
+	"gopkg.in/yaml.v2"
 )
 
 // URL is a custom URL type that allows validation at configuration load time.
