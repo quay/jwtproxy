@@ -1,0 +1,18 @@
+hmacproxy:
+  signer:
+    keyid: 123abc
+    keysecret: 123abc456def
+    listeneraddr: ":8080"
+  verifier:
+    upstream: http://localhost:6060
+    maxclockskew: 15s
+    tls:
+      certfile: ssl.crt
+      keyfile: ssl.key
+      cafile: ca.crt
+      requireclientcertificate: false
+    credentialsource:
+      type: SingleCredential
+      options:
+        keyid: 123abc
+        keysecret: 123abc456def
