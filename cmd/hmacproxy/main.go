@@ -15,34 +15,61 @@
 package main
 
 import (
+	"flag"
+	log "github.com/Sirupsen/logrus"
 	"github.com/coreos-inc/hmacproxy"
-	"log"
+	"github.com/coreos-inc/hmacproxy/config"
 	"net/http/httptest"
 	"net/url"
+	"os"
 )
 
 func main() {
-	tmpCred := hmacproxy.SingleAccessKey{"123", "456"}
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	flagConfigPath := flag.String("config", "", "Load configuration from the specified yaml file.")
+	flagLogLevel := flag.String("log-level", "info", "Define the logging level.")
+	flag.Parse()
 
-	signingDest, err := url.Parse("https://www.google.com")
+	// Load configuration
+	proxyConfig, err := config.Load(*flagConfigPath)
 	if err != nil {
-		log.Fatal(err)
+		flag.Usage()
+		log.Fatalf("failed to load configuration: %s", err)
 	}
-	signingProxy, err := hmacproxy.CreateSigningProxy(signingDest, tmpCred)
-	if err != nil {
-		log.Fatal(err)
-	}
-	signingServer := httptest.NewServer(signingProxy)
-	defer signingServer.Close()
 
-	upstream, err := url.Parse("http://localhost:6060")
+	// Initialize logging system
+	level, err := log.ParseLevel(*flagLogLevel)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to parse the log level")
 	}
-	verificationProxy, err := hmacproxy.CreateVerifyingProxy(upstream, tmpCred)
-	if err != nil {
-		log.Fatal(err)
+	log.SetLevel(level)
+
+	if proxyConfig.Signer != nil {
+		log.Infof("Starting signing proxy on: %s", proxyConfig.Signer.ListenerAddr)
+
+		signingCredential := hmacproxy.SingleAccessKey{proxyConfig.Signer.KeyId, proxyConfig.Signer.KeySecret}
+
+		signingDest, err := url.Parse("https://www.google.com")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		signingProxy, err := hmacproxy.CreateSigningProxy(signingDest, signingCredential)
+		if err != nil {
+			log.Fatal(err)
+		}
+		signingServer := httptest.NewServer(signingProxy)
+		defer signingServer.Close()
 	}
-	verificationServer := httptest.NewServer(verificationProxy)
-	defer verificationServer.Close()
+
+	if proxyConfig.Verifier != nil {
+		log.Infof("Starting verification proxy listening on: %s with upstream: %v", proxyConfig.Verifier.ListenerAddr, proxyConfig.Verifier.Upstream)
+		tmpCred := hmacproxy.SingleAccessKey{proxyConfig.Signer.KeyId, proxyConfig.Signer.KeySecret}
+		verificationProxy, err := hmacproxy.CreateVerifyingProxy(proxyConfig.Verifier.Upstream.URL, tmpCred)
+		if err != nil {
+			log.Fatal(err)
+		}
+		verificationServer := httptest.NewServer(verificationProxy)
+		defer verificationServer.Close()
+	}
 }
