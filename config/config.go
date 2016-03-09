@@ -16,11 +16,14 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"time"
+
+	"github.com/coreos-inc/hmacproxy/credential"
+
+	"gopkg.in/yaml.v2"
 )
 
 // URL is a custom URL type that allows validation at configuration load time.
@@ -51,31 +54,28 @@ func (u URL) MarshalYAML() (interface{}, error) {
 	return nil, nil
 }
 
-// Config is the global configuration
-type configFile struct {
+// File represents a YAML configuration file that namespaces all hmacproxy
+// configuration under the top-level "hmacproxy" key.
+type File struct {
 	HmacProxy *Config
 }
 
+// Config is the global configuration for an instance of hmacproxy.
 type Config struct {
 	Signer   *SignerConfig
 	Verifier *VerifierConfig
 }
 
-// Configuration used to enable and configure the signing half of the proxy
+// SignerConfig is the configuration used to enable and configure the signing half of the proxy.
 type SignerConfig struct {
+	Enabled      bool
 	ListenerAddr string
-	Key          *HMACKey
+	Credential   credential.Credential
 }
 
-type HMACKey struct {
-	ID      string
-	Secret  string
-	Region  string
-	Service string
-}
-
-// Configuration used to enable and configure the verifier half of the proxy
+// VerifierConfig is the configuration used to enable and configure the verifier half of the proxy.
 type VerifierConfig struct {
+	Enabled          bool
 	ListenerAddr     string
 	Upstream         URL
 	MaxClockSkew     time.Duration
@@ -83,8 +83,8 @@ type VerifierConfig struct {
 	CredentialSource *CredentialSourceConfig
 }
 
-// Configuration which when specified enables TLS(SSL), and optionally requires
-// the use of client certificates
+// TLSConfig is the configuration which when specified enables TLS(SSL), and optionally requires
+// the use of client certificates.
 type TLSConfig struct {
 	CertFile                 string
 	KeyFile                  string
@@ -92,19 +92,21 @@ type TLSConfig struct {
 	RequireClientCertificate string
 }
 
-// Configuration options for a verifier credential source
+// CredentialSourceConfig is the configuration options for a verifier credential source.
 type CredentialSourceConfig struct {
 	Type    string
 	Options map[string]interface{} `yaml:",inline"`
 }
 
 // DefaultConfig is a configuration that can be used as a fallback value.
-var DefaultConfig = configFile{
+var DefaultConfig = File{
 	HmacProxy: &Config{
 		Signer: &SignerConfig{
+			Enabled:      false,
 			ListenerAddr: ":8080",
 		},
 		Verifier: &VerifierConfig{
+			Enabled:      false,
 			MaxClockSkew: 1 * time.Minute,
 			ListenerAddr: ":8081",
 		},

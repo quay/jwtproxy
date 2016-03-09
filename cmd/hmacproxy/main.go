@@ -16,12 +16,14 @@ package main
 
 import (
 	"flag"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos-inc/hmacproxy"
 	"github.com/coreos-inc/hmacproxy/config"
-	"net/http/httptest"
-	"net/url"
-	"os"
 )
 
 func main() {
@@ -44,46 +46,50 @@ func main() {
 	}
 	log.SetLevel(level)
 
+	// Start subsystems in their own goroutine.
 	if proxyConfig.Signer != nil {
-		log.Infof("Starting signing proxy on: %s", proxyConfig.Signer.ListenerAddr)
-
-		signingCredential := hmacproxy.SingleAccessKey{
-			proxyConfig.Signer.Key.ID,
-			proxyConfig.Signer.Key.Secret,
-			proxyConfig.Signer.Key.Service,
-			proxyConfig.Signer.Key.Region,
-		}
-
-		signingDest, err := url.Parse("https://www.google.com")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		signingProxy, err := hmacproxy.CreateSigningProxy(signingDest, signingCredential)
-		if err != nil {
-			log.Fatal(err)
-		}
-		signingServer := httptest.NewServer(signingProxy)
-		defer signingServer.Close()
+		go runSigner(*proxyConfig.Signer)
 	}
 
 	if proxyConfig.Verifier != nil {
-		log.Infof(
-			"Starting verification proxy listening on: %s with upstream: %v",
-			proxyConfig.Verifier.ListenerAddr,
-			proxyConfig.Verifier.Upstream,
-		)
-		tmpCred := hmacproxy.SingleAccessKey{
-			proxyConfig.Signer.Key.ID,
-			proxyConfig.Signer.Key.Secret,
-			proxyConfig.Signer.Key.Service,
-			proxyConfig.Signer.Key.Region,
-		}
-		verificationProxy, err := hmacproxy.CreateVerifyingProxy(proxyConfig.Verifier.Upstream.URL, tmpCred)
-		if err != nil {
-			log.Fatal(err)
-		}
-		verificationServer := httptest.NewServer(verificationProxy)
-		defer verificationServer.Close()
+		go runVerifier(*proxyConfig.Verifier)
 	}
+
+	// Wait for interruption and shutdown.
+	waitForSignals(syscall.SIGINT, syscall.SIGTERM)
+}
+
+func runSigner(config config.SignerConfig) {
+	if !config.Enabled {
+		return
+	}
+
+	log.Infof("Starting signing proxy on: %s", config.ListenerAddr)
+
+	signingProxy, err := hmacproxy.CreateSigningProxy(config.Credential)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Fatal(http.ListenAndServe(config.ListenerAddr, signingProxy))
+}
+
+func runVerifier(config config.VerifierConfig) {
+	if !config.Enabled {
+		return
+	}
+
+	log.Infof(
+		"Starting verification proxy listening on: %s with upstream: %v",
+		config.ListenerAddr,
+		config.Upstream,
+	)
+
+	panic("verifier: not implemented")
+}
+
+func waitForSignals(signals ...os.Signal) {
+	interrupts := make(chan os.Signal, 1)
+	signal.Notify(interrupts, signals...)
+	<-interrupts
 }
