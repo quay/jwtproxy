@@ -63,9 +63,15 @@ type Config struct {
 
 // Configuration used to enable and configure the signing half of the proxy
 type SignerConfig struct {
-	KeyId        string
-	KeySecret    string
 	ListenerAddr string
+	Key          *HMACKey
+}
+
+type HMACKey struct {
+	ID      string
+	Secret  string
+	Region  string
+	Service string
 }
 
 // Configuration used to enable and configure the verifier half of the proxy

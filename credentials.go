@@ -19,8 +19,10 @@ import (
 )
 
 type Credential interface {
-	KeyID() string
-	KeySecret() string
+	ID() string
+	Secret() string
+	Service() string
+	Region() string
 }
 
 type CredentialStore interface {
@@ -28,20 +30,30 @@ type CredentialStore interface {
 }
 
 type SingleAccessKey struct {
-	ID     string
-	Secret string
+	KeyID      string
+	KeySecret  string
+	KeyService string
+	KeyRegion  string
 }
 
-func (s SingleAccessKey) KeyID() string {
-	return s.ID
+func (s SingleAccessKey) ID() string {
+	return s.KeyID
 }
 
-func (s SingleAccessKey) KeySecret() string {
-	return s.Secret
+func (s SingleAccessKey) Secret() string {
+	return s.KeySecret
 }
 
-func (s SingleAccessKey) LoadCredential(keyID, _, _ string) (Credential, error) {
-	if keyID != s.ID {
+func (s SingleAccessKey) Service() string {
+	return s.KeyService
+}
+
+func (s SingleAccessKey) Region() string {
+	return s.KeyRegion
+}
+
+func (s SingleAccessKey) LoadCredential(keyID, serviceName, regionName string) (Credential, error) {
+	if keyID != s.ID() || serviceName != s.Service() || regionName != s.Region() {
 		return nil, fmt.Errorf("Unknown key with key id: %s", keyID)
 	}
 	return s, nil
