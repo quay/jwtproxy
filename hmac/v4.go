@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hmacproxy
+// Package hmac implements AWS-Style HMAC signature and verification functions.
+package hmac
 
 import (
 	"bytes"
@@ -26,9 +27,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client/metadata"
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	awscredentials "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/private/signer/v4"
+	"github.com/coreos-inc/hmacproxy/credential"
 )
 
 // timeFormat is the format used in the X-Amz-Date header with aws-sdk-go.
@@ -63,7 +65,7 @@ var (
 
 // Sign4 signs the given http.Request using AWS-Style HMAC v4
 // with the specified Credential, region and service names.
-func Sign4(req *http.Request, cred Credential, regionName, serviceName string) error {
+func Sign4(req *http.Request, cred credential.Credential) error {
 	// If the request that we need to sign has a Body, we must read it entirely and convert it into a
 	// ReadSeeker in order to sign the request.
 	if req.Body != nil {
@@ -76,8 +78,7 @@ func Sign4(req *http.Request, cred Credential, regionName, serviceName string) e
 	}
 
 	// Sign the given http.Request.
-	return sign(req, cred.KeyID(), cred.KeySecret(), regionName, serviceName,
-		time.Now().UTC())
+	return sign(req, cred.ID, cred.Secret, cred.Region, cred.Service, time.Now().UTC())
 }
 
 // Verify4 verifies the AWS-Style HMAC v4 signature present in the given http.Request.
@@ -85,7 +86,7 @@ func Sign4(req *http.Request, cred Credential, regionName, serviceName string) e
 // service names. The maxSkew duration represents the time window within a signed request stays
 // valid. Verify4 returns true if the http.Request has been verified successfully, otherwise
 // the returned error contains the failure reason.
-func Verify4(req *http.Request, creds CredentialStore, maxSkew time.Duration) (bool, error) {
+func Verify4(req *http.Request, creds credential.CredentialStore, maxSkew time.Duration) (bool, error) {
 	// Shallow copy the request as we're going to modify its headers,
 	// and make its Body a ReadSeekerCloser as AWS going to read it and http.Request must be able to
 	// Close() it.
@@ -124,7 +125,7 @@ func Verify4(req *http.Request, creds CredentialStore, maxSkew time.Duration) (b
 	}
 
 	// Sign our copy of the given http.Request.
-	err = sign(reqCopy, keyID, cred.KeySecret(), regionName, serviceName, signatureTime)
+	err = sign(reqCopy, cred.ID, cred.Secret, cred.Region, cred.Service, signatureTime)
 	if err != nil {
 		return false, err
 	}
@@ -159,7 +160,7 @@ func sign(req *http.Request, keyID, keySecret, regionName, serviceName string, t
 	// Forge an AWS request.
 	awsReq := &request.Request{
 		Config: aws.Config{
-			Credentials: credentials.NewStaticCredentials(keyID, keySecret, ""),
+			Credentials: awscredentials.NewStaticCredentials(keyID, keySecret, ""),
 			Region:      aws.String(regionName),
 		},
 		ClientInfo: metadata.ClientInfo{

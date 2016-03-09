@@ -1,23 +1,25 @@
 hmacproxy:
   signer:
-    key:
+    enabled: true
+    credential:
       id: 123abc
       secret: 123abc456def
       region: quay
       service: clair
-    listeneraddr: ":8080"
+    listenerAddr: ":8080"
   verifier:
+    enabled: false
     upstream: http://localhost:6060
-    maxclockskew: 15s
+    maxClockSkew: 15s
     tls:
-      certfile: ssl.crt
-      keyfile: ssl.key
+      certFile: ssl.crt
+      keyFile: ssl.key
       cafile: ca.crt
-      requireclientcertificate: false
-    credentialsource:
+      requireClientCertificate: false
+    credentialSource:
       type: SingleCredential
       options:
-        keyid: 123abc
-        keysecret: 123abc456def
-        keyregion: quay
-        service: quay
+        keyID: 123abc
+        keySecret: 123abc456def
+        keyRegion: quay
+        keyService: quay
