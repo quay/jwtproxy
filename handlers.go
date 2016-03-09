@@ -19,9 +19,11 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+
+	"github.com/coreos-inc/hmacproxy/credential"
 )
 
-func CreateSigningProxy(target *url.URL, credential Credential) (*httputil.ReverseProxy, error) {
+func CreateSigningProxy(target *url.URL, cred credential.Credential) (*httputil.ReverseProxy, error) {
 	director := func(req *http.Request) {
 		log.Printf("Proxying request %v", req)
 		req.URL.Scheme = target.Scheme
@@ -30,7 +32,7 @@ func CreateSigningProxy(target *url.URL, credential Credential) (*httputil.Rever
 	return &httputil.ReverseProxy{Director: director}, nil
 }
 
-func CreateVerifyingProxy(target *url.URL, credStore CredentialStore) (*httputil.ReverseProxy, error) {
+func CreateVerifyingProxy(target *url.URL, cs credential.CredentialStore) (*httputil.ReverseProxy, error) {
 	director := func(req *http.Request) {
 		log.Printf("Proxying request %v", req)
 		req.URL.Scheme = target.Scheme

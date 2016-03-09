@@ -16,12 +16,16 @@ package main
 
 import (
 	"flag"
-	log "github.com/Sirupsen/logrus"
-	"github.com/coreos-inc/hmacproxy"
-	"github.com/coreos-inc/hmacproxy/config"
 	"net/http/httptest"
 	"net/url"
 	"os"
+
+	log "github.com/Sirupsen/logrus"
+
+	"github.com/coreos-inc/hmacproxy"
+	"github.com/coreos-inc/hmacproxy/config"
+	"github.com/coreos-inc/hmacproxy/credential"
+	_ "github.com/coreos-inc/hmacproxy/credential/singlekey"
 )
 
 func main() {
@@ -47,7 +51,7 @@ func main() {
 	if proxyConfig.Signer != nil {
 		log.Infof("Starting signing proxy on: %s", proxyConfig.Signer.ListenerAddr)
 
-		signingCredential := hmacproxy.SingleAccessKey{
+		signingCredential := credential.Credential{
 			proxyConfig.Signer.Key.ID,
 			proxyConfig.Signer.Key.Secret,
 			proxyConfig.Signer.Key.Service,
@@ -73,13 +77,13 @@ func main() {
 			proxyConfig.Verifier.ListenerAddr,
 			proxyConfig.Verifier.Upstream,
 		)
-		tmpCred := hmacproxy.SingleAccessKey{
-			proxyConfig.Signer.Key.ID,
-			proxyConfig.Signer.Key.Secret,
-			proxyConfig.Signer.Key.Service,
-			proxyConfig.Signer.Key.Region,
+
+		cs, err := credential.CreateCredentialStore(proxyConfig.Verifier.CredentialSource)
+		if err != nil {
+			log.Fatal(err)
 		}
-		verificationProxy, err := hmacproxy.CreateVerifyingProxy(proxyConfig.Verifier.Upstream.URL, tmpCred)
+
+		verificationProxy, err := hmacproxy.CreateVerifyingProxy(proxyConfig.Verifier.Upstream.URL, cs)
 		if err != nil {
 			log.Fatal(err)
 		}
