@@ -50,13 +50,17 @@ var (
 	// be replayed by an adversary.
 	ErrSignatureTooSkewed = errors.New("could not verify http request: signature too skewed")
 
-	// WhiteListedHeaders is the list of http.Header that are explicitely excluded during signature
-	// verifications.
-	WhiteListedHeaders = map[string]struct{}{
+	// IgnoredHeaders is the list of http.Header that are explicitely excluded during signature
+	// creation and verification.
+	IgnoredHeaders = map[string]struct{}{
 		"X-Amz-Date":           {},
 		"X-Amz-Content-Sha256": {},
 		"Authorization":        {},
 		"Accept-Encoding":      {},
+		"Connection":           {},
+		"Proxy-Connection":     {},
+		"Proxy-Authenticate":   {},
+		"Proxy-Authorization":  {},
 	}
 
 	// signatureRegexp matches the HMAC signature and captures its key ID, service and region names.
@@ -66,19 +70,33 @@ var (
 // Sign4 signs the given http.Request using AWS-Style HMAC v4
 // with the specified Credential, region and service names.
 func Sign4(req *http.Request, cred credential.Credential) error {
-	// If the request that we need to sign has a Body, we must read it entirely and convert it into a
-	// ReadSeeker in order to sign the request.
-	if req.Body != nil {
-		body, err := newReadSeekCloser(req.Body)
-		if err != nil {
-			return err
-		}
-
-		req.Body = body
+	// Shallow copy the request as we're going to modify its headers,
+	// and make its Body a ReadSeekerCloser as AWS is going to read it and http.Request must be able to
+	// Close() it.
+	reqCopy, err := duplicateRequest(req)
+	if err != nil {
+		return err
 	}
 
-	// Sign the given http.Request.
-	return sign(req, cred.ID, cred.Secret, cred.Region, cred.Service, time.Now().UTC())
+	// Remove any potential ignored headers fron the incoming request.
+	for header := range reqCopy.Header {
+		if _, isIgnored := IgnoredHeaders[header]; isIgnored {
+			reqCopy.Header.Del(header)
+		}
+	}
+
+	// Sign our copy of the given http.Request.
+	err = sign(reqCopy, cred.ID, cred.Secret, cred.Region, cred.Service, time.Now().UTC())
+	if err != nil {
+		return err
+	}
+
+	// Add signature headers to the original request.
+	req.Header.Add("Authorization", reqCopy.Header.Get("Authorization"))
+	req.Header.Add("X-Amz-Content-Sha256", reqCopy.Header.Get("X-Amz-Content-Sha256"))
+	req.Header.Add("X-Amz-Date", reqCopy.Header.Get("X-Amz-Date"))
+
+	return nil
 }
 
 // Verify4 verifies the AWS-Style HMAC v4 signature present in the given http.Request.
@@ -89,7 +107,7 @@ func Sign4(req *http.Request, cred credential.Credential) error {
 // failure reason.
 func Verify4(req *http.Request, creds credential.Store, maxSkew time.Duration) (*credential.Credential, error) {
 	// Shallow copy the request as we're going to modify its headers,
-	// and make its Body a ReadSeekerCloser as AWS going to read it and http.Request must be able to
+	// and make its Body a ReadSeekerCloser as AWS is going to read it and http.Request must be able to
 	// Close() it.
 	reqCopy, err := duplicateRequest(req)
 	if err != nil {
@@ -118,9 +136,9 @@ func Verify4(req *http.Request, creds credential.Store, maxSkew time.Duration) (
 		return nil, err
 	}
 
-	// Remove any potential white-listed headers fron the incoming request.
+	// Remove any potential ignored headers fron the incoming request.
 	for header := range reqCopy.Header {
-		if _, isWhitelisted := WhiteListedHeaders[header]; isWhitelisted {
+		if _, isIgnored := IgnoredHeaders[header]; isIgnored {
 			reqCopy.Header.Del(header)
 		}
 	}
@@ -163,6 +181,8 @@ func sign(req *http.Request, keyID, keySecret, regionName, serviceName string, t
 		Config: aws.Config{
 			Credentials: credentials.NewStaticCredentials(keyID, keySecret, ""),
 			Region:      aws.String(regionName),
+			// LogLevel:    aws.LogLevel(aws.LogDebugWithSigning),
+			// Logger:      aws.NewDefaultLogger(),
 		},
 		ClientInfo: metadata.ClientInfo{
 			ServiceName: serviceName,
