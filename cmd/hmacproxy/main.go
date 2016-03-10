@@ -17,8 +17,9 @@ package main
 import (
 	"flag"
 	"net/http"
-	"net/http/httptest"
 	"os"
+	"os/signal"
+	"syscall"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -48,40 +49,64 @@ func main() {
 	}
 	log.SetLevel(level)
 
+	// Run subsystems.
+	// TODO: Ability to disable the one that we don't want to run.
 	if proxyConfig.Signer != nil {
-		log.Infof("Starting signing proxy on: %s", proxyConfig.Signer.ListenerAddr)
-
-		signingCredential := credential.Credential{
-			proxyConfig.Signer.Key.ID,
-			proxyConfig.Signer.Key.Secret,
-			proxyConfig.Signer.Key.Service,
-			proxyConfig.Signer.Key.Region,
-		}
-
-		signingProxy, err := hmacproxy.NewSigningProxy(signingCredential)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Fatal(http.ListenAndServe(proxyConfig.Signer.ListenerAddr, signingProxy))
+		go runSigner(*proxyConfig.Signer)
 	}
-
 	if proxyConfig.Verifier != nil {
-		log.Infof(
-			"Starting verification proxy listening on: %s with upstream: %v",
-			proxyConfig.Verifier.ListenerAddr,
-			proxyConfig.Verifier.Upstream,
-		)
-
-		cs, err := credential.NewStore(proxyConfig.Verifier.CredentialSource)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		verificationProxy, err := hmacproxy.NewVerifyingProxy(proxyConfig.Verifier.Upstream.URL, cs)
-		if err != nil {
-			log.Fatal(err)
-		}
-		verificationServer := httptest.NewServer(verificationProxy)
-		defer verificationServer.Close()
+		go runVerifier(*proxyConfig.Verifier)
 	}
+
+	// Wait for interruption.
+	waitForSignals(syscall.SIGINT, syscall.SIGTERM)
+}
+
+func runSigner(config config.SignerConfig) {
+	log.Infof("Starting signing proxy on: %s", config.ListenerAddr)
+
+	signingCredential := credential.Credential{
+		config.Key.ID,
+		config.Key.Secret,
+		config.Key.Service,
+		config.Key.Region,
+	}
+
+	signingProxy, err := hmacproxy.NewSigningProxy(signingCredential)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Fatal(http.ListenAndServe(config.ListenerAddr, signingProxy))
+}
+
+func runVerifier(config config.VerifierConfig) {
+	log.Infof(
+		"Starting verification proxy listening on: %s with upstream: %v",
+		config.ListenerAddr,
+		config.Upstream,
+	)
+
+	cs, err := credential.NewStore(config.CredentialSource)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	verificationProxy, err := hmacproxy.NewVerifyingProxy(
+		config.Upstream.URL,
+		cs,
+		config.MaxClockSkew,
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Fatal(http.ListenAndServe(config.ListenerAddr, verificationProxy))
+}
+
+func waitForSignals(signals ...os.Signal) {
+	interrupts := make(chan os.Signal, 1)
+	signal.Notify(interrupts, signals...)
+	<-interrupts
 }
