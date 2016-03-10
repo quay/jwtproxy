@@ -16,11 +16,13 @@ package hmacproxy
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
+	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/coreos-inc/hmacproxy/credential"
 	"github.com/elazarl/goproxy"
 )
@@ -38,8 +40,14 @@ func NewSigningProxy(cred credential.Credential) (*goproxy.ProxyHttpServer, erro
 					http.StatusBadRequest,
 					fmt.Sprintf("Could not sign request: %v", err),
 				)
+
+				log.Errorf("Could not sign request: %#v (%v)", r, err)
+
 				return r, response
 			}
+
+			log.Debugf("Proxying signed request: %#v", r)
+
 			return r, nil
 		})
 
@@ -49,11 +57,50 @@ func NewSigningProxy(cred credential.Credential) (*goproxy.ProxyHttpServer, erro
 // NewVerifyingProxy instantiates a new verifying proxy with the specified
 // upstream URL and credential store, which will be used to verify incoming
 // requests.
-func NewVerifyingProxy(upstream *url.URL, cs credential.Store) (*httputil.ReverseProxy, error) {
-	director := func(req *http.Request) {
-		log.Printf("Proxying request %v", req)
-		req.URL.Scheme = upstream.Scheme
-		req.URL.Host = upstream.Host
+// TODO: Implement TLS.
+func NewVerifyingProxy(upstream *url.URL, cs credential.Store, maxSkew time.Duration) (*httputil.ReverseProxy, error) {
+	upstreamQuery := upstream.RawQuery
+	director := func(r *http.Request) {
+
+		// Verify request.
+		cred, err := Verify4(r, cs, maxSkew)
+		if err != nil || cred == nil {
+			// Invalid or non-existent signature, reject request.
+			log.Warningf("Dropping request: %#v (%v)", r, err)
+
+			// TODO: Find a better way to do it.
+			panic("Dropping request")
+		}
+
+		// Do minimal reverse proxy logic.
+		r.URL.Scheme = upstream.Scheme
+		r.URL.Host = upstream.Host
+		r.URL.Path = singleJoiningSlash(upstream.Path, r.URL.Path)
+		if upstreamQuery == "" || r.URL.RawQuery == "" {
+			r.URL.RawQuery = upstreamQuery + r.URL.RawQuery
+		} else {
+			r.URL.RawQuery = upstreamQuery + "&" + r.URL.RawQuery
+		}
+
+		// Add headers indicating the validated credential.
+		r.Header.Add("X-HMAC-KeyID", cred.ID)
+		r.Header.Add("X-HMAC-Region", cred.Region)
+		r.Header.Add("X-HMAC-Service", cred.Service)
+
+		log.Debugf("Proxying verified request: %#v", r)
 	}
+
 	return &httputil.ReverseProxy{Director: director}, nil
+}
+
+func singleJoiningSlash(a, b string) string {
+	aslash := strings.HasSuffix(a, "/")
+	bslash := strings.HasPrefix(b, "/")
+	switch {
+	case aslash && bslash:
+		return a + b[1:]
+	case !aslash && !bslash:
+		return a + "/" + b
+	}
+	return a + b
 }
