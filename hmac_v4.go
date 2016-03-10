@@ -84,15 +84,16 @@ func Sign4(req *http.Request, cred credential.Credential) error {
 // Verify4 verifies the AWS-Style HMAC v4 signature present in the given http.Request.
 // It uses the CredentialStore to find the appropriate Credential based on the key ID, region and
 // service names. The maxSkew duration represents the time window within a signed request stays
-// valid. Verify4 returns true if the http.Request has been verified successfully, otherwise
-// the returned error contains the failure reason.
-func Verify4(req *http.Request, creds credential.Store, maxSkew time.Duration) (bool, error) {
+// valid. Verify4 returns the Credential that has been used to sign the request or nil if the
+// http.Request could not be verified successfully. An error is also returned and indicates the
+// failure reason.
+func Verify4(req *http.Request, creds credential.Store, maxSkew time.Duration) (*credential.Credential, error) {
 	// Shallow copy the request as we're going to modify its headers,
 	// and make its Body a ReadSeekerCloser as AWS going to read it and http.Request must be able to
 	// Close() it.
 	reqCopy, err := duplicateRequest(req)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// Assign the Host properly to match the initial signed request.
@@ -107,14 +108,14 @@ func Verify4(req *http.Request, creds credential.Store, maxSkew time.Duration) (
 
 	// Ensure that the given request has a valid signature, otherwise we can't verify anything.
 	if signature == "" || errP != nil || errT != nil {
-		return false, ErrNoValidSignature
+		return nil, ErrNoValidSignature
 	}
 
 	// Get the Credential associated with the key ID, service and region names from the
 	// CredentialStore.
 	cred, err := creds.LoadCredential(keyID, serviceName, regionName)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// Remove any potential white-listed headers fron the incoming request.
@@ -127,22 +128,22 @@ func Verify4(req *http.Request, creds credential.Store, maxSkew time.Duration) (
 	// Sign our copy of the given http.Request.
 	err = sign(reqCopy, keyID, cred.Secret, regionName, serviceName, signatureTime)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// Compare the computed signature with the one that's present in the request that we're verifying.
 	computedSignature := reqCopy.Header.Get("Authorization")
 	if subtle.ConstantTimeCompare([]byte(signature), []byte(computedSignature)) != 1 {
-		return false, ErrSignatureMismatch
+		return nil, ErrSignatureMismatch
 	}
 
 	// Compare the signature date with the skew policy.
 	if signatureTime.After(time.Now().UTC().Add(maxSkew)) ||
 		signatureTime.Before(time.Now().UTC().Add(-maxSkew)) {
-		return false, ErrSignatureTooSkewed
+		return nil, ErrSignatureTooSkewed
 	}
 
-	return true, nil
+	return cred, nil
 }
 
 // parseSignature extracts the key ID, the service name and the region name out of the given
