@@ -16,8 +16,8 @@ package main
 
 import (
 	"flag"
+	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 
 	log "github.com/Sirupsen/logrus"
@@ -58,17 +58,11 @@ func main() {
 			proxyConfig.Signer.Key.Region,
 		}
 
-		signingDest, err := url.Parse("https://www.google.com")
+		signingProxy, err := hmacproxy.NewSigningProxy(signingCredential)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		signingProxy, err := hmacproxy.NewSigningProxy(signingDest, signingCredential)
-		if err != nil {
-			log.Fatal(err)
-		}
-		signingServer := httptest.NewServer(signingProxy)
-		defer signingServer.Close()
+		log.Fatal(http.ListenAndServe(proxyConfig.Signer.ListenerAddr, signingProxy))
 	}
 
 	if proxyConfig.Verifier != nil {
