@@ -154,7 +154,7 @@ func parseSignature(signature string) (string, string, string, error) {
 		return "", "", "", errors.New("invalid signature format")
 	}
 
-	return m[0], m[1], m[2], nil
+	return m[1], m[2], m[3], nil
 }
 
 func sign(req *http.Request, keyID, keySecret, regionName, serviceName string, time time.Time) error {
