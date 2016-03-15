@@ -1,23 +1,13 @@
-hmacproxy:
+jwtproxy:
   signer:
-    key:
-      id: 123abc
-      secret: 123abc456def
-      region: quay
-      service: clair
-    listeneraddr: ":8080"
+    listenaddr: :8080
+    # CA used to forge certificates used by
+    # the proxy's MITM mechanism.
+    cakeyfile: ca.key
+    cacrtfile: ca.crt
   verifier:
-    upstream: http://localhost:6060
-    maxclockskew: 15s
-    tls:
-      certfile: ssl.crt
-      keyfile: ssl.key
-      cafile: ca.crt
-      requireclientcertificate: false
-    credentialsource:
-      type: SingleCredential
-      options:
-        keyid: 123abc
-        keysecret: 123abc456def
-        keyregion: quay
-        service: quay
+    listenaddr: :8082
+    upstream: http://127.0.0.1:8888/
+    # Key pair used to terminate TLS.
+    keyfile: localhost.key
+    crtfile: localhost.crt

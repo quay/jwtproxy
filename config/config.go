@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -55,7 +54,7 @@ func (u URL) MarshalYAML() (interface{}, error) {
 // Represents a config file, which may have configuration for other programs
 // as a top level key.
 type configFile struct {
-	HmacProxy *Config
+	JWTProxy *Config
 }
 
 // Config is the global configuration
@@ -64,55 +63,27 @@ type Config struct {
 	Verifier *VerifierConfig
 }
 
-// SignerConfig is used to enable and configure the signing half of the proxy.
-type SignerConfig struct {
-	ListenerAddr string
-	Key          *HMACKey
-}
-
-// HMACKey represents a single hard coded credential.
-type HMACKey struct {
-	ID      string
-	Secret  string
-	Region  string
-	Service string
-}
-
-// VerifierConfig is used to enable and configure the verifier half of the
-// proxy.
 type VerifierConfig struct {
-	ListenerAddr     string
-	Upstream         URL
-	MaxClockSkew     time.Duration
-	TLS              *TLSConfig
-	CredentialSource *CredentialSourceConfig
+	ListenAddr string
+	CrtFile    string
+	KeyFile    string
+	Upstream   URL
 }
 
-// TLSConfig enables TLS(SSL) when specified, and optionally requires the use
-// of client certificates.
-type TLSConfig struct {
-	CertFile                 string
-	KeyFile                  string
-	CAFile                   string
-	RequireClientCertificate string
-}
-
-// CredentialSourceConfig specified a credential source and the options
-// required to instantiate it.
-type CredentialSourceConfig struct {
-	Type    string
-	Options map[string]interface{} `yaml:",inline"`
+type SignerConfig struct {
+	ListenAddr string
+	CAKeyFile  string
+	CACrtFile  string
 }
 
 // DefaultConfig is a configuration that can be used as a fallback value.
 var DefaultConfig = configFile{
-	HmacProxy: &Config{
+	JWTProxy: &Config{
 		Signer: &SignerConfig{
-			ListenerAddr: ":8080",
+			ListenAddr: ":8080",
 		},
 		Verifier: &VerifierConfig{
-			MaxClockSkew: 1 * time.Minute,
-			ListenerAddr: ":8081",
+			ListenAddr: ":8081",
 		},
 	},
 }
@@ -142,6 +113,6 @@ func Load(path string) (config *Config, err error) {
 		return
 	}
 
-	config = cFile.HmacProxy
+	config = cFile.JWTProxy
 	return
 }
