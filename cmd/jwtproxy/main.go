@@ -22,9 +22,9 @@ import (
 	"syscall"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/coreos-inc/hmacproxy/config"
-	"github.com/coreos-inc/hmacproxy/jwt"
-	"github.com/coreos-inc/hmacproxy/proxy"
+	"github.com/coreos-inc/jwtproxy/config"
+	"github.com/coreos-inc/jwtproxy/jwt"
+	"github.com/coreos-inc/jwtproxy/proxy"
 )
 
 func main() {
