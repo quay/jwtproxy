@@ -20,7 +20,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/coreos-inc/hmacproxy/proxy"
+	"github.com/coreos-inc/jwtproxy/proxy"
 	"github.com/elazarl/goproxy"
 )
 
