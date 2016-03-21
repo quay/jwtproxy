@@ -22,7 +22,7 @@ import (
 	"regexp"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/elazarl/goproxy"
+	"github.com/quentin-m/goproxy"
 )
 
 const httpRegexp = `^.*:80$`

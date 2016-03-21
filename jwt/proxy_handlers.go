@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/coreos-inc/jwtproxy/proxy"
-	"github.com/elazarl/goproxy"
+	"github.com/quentin-m/goproxy"
 )
 
 func NewJWTSignerHandler() proxy.ProxyHandler {
