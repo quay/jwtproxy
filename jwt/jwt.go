@@ -123,10 +123,10 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 	return nil
 }
 
-func verifyAudience(aud string, audience *url.URL) bool {
-	audURL, err := url.Parse(aud)
+func verifyAudience(actual string, expected *url.URL) bool {
+	actualURL, err := url.Parse(actual)
 	if err != nil {
 		return false
 	}
-	return strings.ToLower(audURL.Host+audURL.Path) == strings.ToLower(audience.Host+audience.Path)
+	return strings.EqualFold(actualURL.Host+actualURL.Path, expected.Host+expected.Path)
 }
