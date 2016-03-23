@@ -54,7 +54,7 @@ func Sign(req *http.Request, issuer string, key *key.PrivateKey, nonceGenerator 
 	return nil
 }
 
-func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncestorage.NonceStorage, audience *url.URL, maxSkew time.Duration) error {
+func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncestorage.NonceStorage, audience *url.URL, maxSkew, maxTTL time.Duration) error {
 	// Extract token from request.
 	token, err := oidc.ExtractBearerToken(req)
 	if err != nil {
@@ -95,9 +95,12 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 	if !exists || err != nil || nbf.After(now) {
 		return errors.New("missing or invalid 'nbf' claim")
 	}
-	_, exists, err = claims.TimeClaim("iat")
+	iat, exists, err := claims.TimeClaim("iat")
 	if !exists || err != nil {
 		return errors.New("missing or invalid 'iat' claim")
+	}
+	if exp.Sub(iat) > maxTTL {
+		return errors.New("'exp' is too far in the future")
 	}
 	jti, exists, err := claims.StringClaim("jti")
 	if !exists || err != nil || !nonceVerifier.Verify(jti, exp) {
