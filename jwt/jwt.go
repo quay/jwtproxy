@@ -54,7 +54,7 @@ func Sign(req *http.Request, issuer string, key *key.PrivateKey, nonceGenerator 
 	return nil
 }
 
-func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncestorage.NonceStorage, audience *url.URL, maxSkew, maxTTL time.Duration) error {
+func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncestorage.NonceStorage, audience *url.URL, maxTTL time.Duration) error {
 	// Extract token from request.
 	token, err := oidc.ExtractBearerToken(req)
 	if err != nil {
