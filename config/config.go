@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -59,32 +60,48 @@ type configFile struct {
 
 // Config is the global configuration
 type Config struct {
-	Signer   *SignerConfig
-	Verifier *VerifierConfig
+	SignerProxy   SignerProxyConfig   `yaml:"signer_proxy"`
+	VerifierProxy VerifierProxyConfig `yaml:"verifier_proxy"`
+}
+
+type VerifierProxyConfig struct {
+	ListenAddr string         `yaml:"listen_addr"`
+	CrtFile    string         `yaml:"crt_file"`
+	KeyFile    string         `yaml:"key_file"`
+	Verifier   VerifierConfig `yaml:"verifier"`
+}
+
+type SignerProxyConfig struct {
+	ListenAddr string       `yaml:"listen_addr"`
+	CAKeyFile  string       `yaml:"ca_key_file"`
+	CACrtFile  string       `yaml:"ca_crt_file"`
+	Signer     SignerConfig `yaml:"signer"`
 }
 
 type VerifierConfig struct {
-	ListenAddr string
-	CrtFile    string
-	KeyFile    string
-	Upstream   URL
+	Upstream     URL                        `yaml:"upstream"`
+	Audience     URL                        `yaml:"audience"`
+	MaxTTL       time.Duration              `yaml:"max_ttl"`
+	KeyServer    RegistrableComponentConfig `yaml:"key_server"`
+	NonceStorage RegistrableComponentConfig `yaml:"nonce_storage"`
 }
 
 type SignerConfig struct {
-	ListenAddr string
-	CAKeyFile  string
-	CACrtFile  string
+	Issuer       string                     `yaml:"issuer"`
+	MaxSkew      time.Duration              `yaml:"max_skew"`
+	PrivateKey   RegistrableComponentConfig `yaml:"private_key"`
+	NonceStorage RegistrableComponentConfig `yaml:"nonce_storage"`
+}
+
+type RegistrableComponentConfig struct {
+	Type    string                 `yaml:"type"`
+	Options map[string]interface{} `yaml:"options"`
 }
 
 // DefaultConfig is a configuration that can be used as a fallback value.
 var DefaultConfig = configFile{
 	JWTProxy: &Config{
-		Signer: &SignerConfig{
-			ListenAddr: ":8080",
-		},
-		Verifier: &VerifierConfig{
-			ListenAddr: ":8081",
-		},
+	//TODO
 	},
 }
 
@@ -117,7 +134,6 @@ func Load(path string) (config *Config, err error) {
 	return
 }
 
-// TODO: Integrate me.
 type RegistrableComponentConfig struct {
 	Type    string                 `yaml:"type"`
 	Options map[string]interface{} `yaml:"options"`

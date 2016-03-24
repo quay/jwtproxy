@@ -18,14 +18,14 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
-	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
-	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
 	"github.com/coreos/go-oidc/jose"
 	"github.com/coreos/go-oidc/key"
 	"github.com/coreos/go-oidc/oidc"
+
+	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
+	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
 )
 
 func Sign(req *http.Request, issuer string, key *key.PrivateKey, nonceGenerator noncestorage.NonceStorage, maxSkew time.Duration) error {

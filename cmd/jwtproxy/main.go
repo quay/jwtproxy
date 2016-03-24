@@ -22,9 +22,14 @@ import (
 	"syscall"
 
 	log "github.com/Sirupsen/logrus"
+
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt"
 	"github.com/coreos-inc/jwtproxy/proxy"
+
+	_ "github.com/coreos-inc/jwtproxy/jwt/keyserver/preshared"
+	_ "github.com/coreos-inc/jwtproxy/jwt/noncestorage/local"
+	_ "github.com/coreos-inc/jwtproxy/jwt/privatekey/preshared"
 )
 
 func main() {
@@ -48,11 +53,17 @@ func main() {
 	log.SetLevel(level)
 
 	// Create JWT proxy handlers.
-	fwp := jwt.NewJWTSignerHandler()
-	rvp := jwt.NewJWTVerifierHandler(config.Verifier.Upstream.URL)
+	fwp, err := jwt.NewJWTSignerHandler(config.SignerProxy.Signer)
+	if err != nil {
+		log.Fatalf("failed to create JWT signer: %s", err)
+	}
+	rvp, err := jwt.NewJWTVerifierHandler(config.VerifierProxy.Verifier)
+	if err != nil {
+		log.Fatalf("failed to create JWT verifier: %s", err)
+	}
 
 	// Create forward and reverse proxies.
-	forwardProxy, err := proxy.NewProxy(fwp, config.Signer.CAKeyFile, config.Signer.CACrtFile)
+	forwardProxy, err := proxy.NewProxy(fwp, config.SignerProxy.CAKeyFile, config.SignerProxy.CACrtFile)
 	if err != nil {
 		log.Fatalf("failed to create forward proxy: %s", err)
 	}
@@ -65,17 +76,16 @@ func main() {
 	// Start proxies.
 	go func() {
 		log.Info("Starting forward proxy")
-		log.Fatal(http.ListenAndServe(config.Signer.ListenAddr, forwardProxy))
+		log.Fatal(http.ListenAndServe(config.SignerProxy.ListenAddr, forwardProxy))
 	}()
 
 	go func() {
-		if config.Verifier.CrtFile != "" && config.Verifier.KeyFile != "" {
+		if config.VerifierProxy.CrtFile != "" && config.VerifierProxy.KeyFile != "" {
 			log.Info("Starting reverse proxy (TLS Enabled)")
-			log.Fatal(http.ListenAndServeTLS(config.Verifier.ListenAddr, config.Verifier.CrtFile, config.Verifier.KeyFile, reverseProxy))
-
+			log.Fatal(http.ListenAndServeTLS(config.VerifierProxy.ListenAddr, config.VerifierProxy.CrtFile, config.VerifierProxy.KeyFile, reverseProxy))
 		} else {
 			log.Info("Starting reverse proxy (TLS Disabled)")
-			go log.Fatal(http.ListenAndServe(config.Verifier.ListenAddr, reverseProxy))
+			go log.Fatal(http.ListenAndServe(config.VerifierProxy.ListenAddr, reverseProxy))
 		}
 	}()
 

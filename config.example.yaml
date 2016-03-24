@@ -1,13 +1,45 @@
 jwtproxy:
-  signer:
-    listenaddr: :8080
+  signer_proxy:
+    listen_addr: :8080
+
     # CA used to forge certificates used by
     # the proxy's MITM mechanism.
-    cakeyfile: ca.key
-    cacrtfile: ca.crt
-  verifier:
-    listenaddr: :8082
-    upstream: http://127.0.0.1:8888/
+    ca_key_file: ca.key
+    ca_crt_file: ca.crt
+
+    signer:
+      issuer: jwtproxy
+      max_skew: 5m # time window within a JWT is valid
+      private_key:
+        type: preshared
+        options:
+          key_id: myKey
+          private_key_path: myKey.pem
+      nonce_storage:
+        type: local
+        options:
+          length: 32 # length of generated nonces
+          purge_interval: 10m # interval between expired expired nonce cleanups
+
+  verifier_proxy:
+    listen_addr: :8082
+
     # Key pair used to terminate TLS.
-    keyfile: localhost.key
-    crtfile: localhost.crt
+    key_file: localhost.key
+    crt_file: localhost.crt
+
+    verifier:
+      upstream: http://localhost:8888/
+      audience: https://localhost:8082/ # host used to talk to the verifier proxy
+      max_ttl: 5m # maximum expiration duration that a JWT can be signed for to be accepted
+      key_server:
+        type: preshared
+        options:
+          issuer: jwtproxy
+          key_id: myKey
+          public_key_path: myKey.crt
+      nonce_storage:
+        type: local
+        options:
+          length: 32 # length of generated nonces
+          purge_interval: 10m # interval between expired expired nonce cleanups
