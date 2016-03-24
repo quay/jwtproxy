@@ -31,6 +31,11 @@ import (
 )
 
 func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.ProxyHandler, error) {
+	// Verify config (required keys that have no defaults).
+	if cfg.PrivateKey.Type == "" {
+		return nil, errors.New("no private key provider specified")
+	}
+
 	// Get the private key that will be used for signing.
 	privateKeyProvider, err := privatekey.New(cfg.PrivateKey)
 	if err != nil {
@@ -41,15 +46,9 @@ func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.ProxyHandler, error) {
 		return nil, err
 	}
 
-	// Create a NonceStorage that will create nonces for signing.
-	nonceStorage, err := noncestorage.New(cfg.NonceStorage)
-	if err != nil {
-		return nil, err
-	}
-
 	// Create a ProxyHandler that will add a JWT to http.Requests.
 	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		if err := Sign(r, cfg.Issuer, privateKey, nonceStorage, cfg.MaxSkew); err != nil {
+		if err := Sign(r, cfg.Issuer, privateKey, cfg.NonceLength, cfg.ExpirationTime, cfg.MaxSkew); err != nil {
 			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusBadGateway, fmt.Sprintf("jwtproxy: unable to sign request: %s", err))
 		}
 		return r, nil
@@ -57,6 +56,17 @@ func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.ProxyHandler, error) {
 }
 
 func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.ProxyHandler, error) {
+	// Verify config (required keys that have no defaults).
+	if cfg.Upstream.URL == nil {
+		return nil, errors.New("no upstream specified")
+	}
+	if cfg.Audience.URL == nil {
+		return nil, errors.New("no audience specified")
+	}
+	if cfg.KeyServer.Type == "" {
+		return nil, errors.New("no key server specified")
+	}
+
 	// Create a KeyServer that will provide public keys for signature verification.
 	keyServer, err := keyserver.NewReader(cfg.KeyServer)
 	if err != nil {

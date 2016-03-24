@@ -9,20 +9,17 @@ jwtproxy:
 
     signer:
       issuer: jwtproxy
-      max_skew: 5m # time window within a JWT is valid
+      expiration_time: 5m
+      max_skew: 1m
+      nonce_length: 32 # length of generated nonces
       private_key:
         type: preshared
         options:
           key_id: myKey
           private_key_path: myKey.pem
-      nonce_storage:
-        type: local
-        options:
-          length: 32 # length of generated nonces
-          purge_interval: 10m # interval between expired expired nonce cleanups
 
   verifier_proxy:
-    listen_addr: :8082
+    listen_addr: :8081
 
     # Key pair used to terminate TLS.
     key_file: localhost.key
@@ -30,7 +27,7 @@ jwtproxy:
 
     verifier:
       upstream: http://localhost:8888/
-      audience: https://localhost:8082/ # host used to talk to the verifier proxy
+      audience: https://localhost:8081/ # host used to talk to the verifier proxy
       max_ttl: 5m # maximum expiration duration that a JWT can be signed for to be accepted
       key_server:
         type: preshared
@@ -41,5 +38,4 @@ jwtproxy:
       nonce_storage:
         type: local
         options:
-          length: 32 # length of generated nonces
           purge_interval: 10m # interval between expired expired nonce cleanups

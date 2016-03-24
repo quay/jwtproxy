@@ -15,7 +15,6 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -55,7 +54,7 @@ func (u URL) MarshalYAML() (interface{}, error) {
 // Represents a config file, which may have configuration for other programs
 // as a top level key.
 type configFile struct {
-	JWTProxy *Config
+	JWTProxy Config
 }
 
 // Config is the global configuration
@@ -87,10 +86,11 @@ type VerifierConfig struct {
 }
 
 type SignerConfig struct {
-	Issuer       string                     `yaml:"issuer"`
-	MaxSkew      time.Duration              `yaml:"max_skew"`
-	PrivateKey   RegistrableComponentConfig `yaml:"private_key"`
-	NonceStorage RegistrableComponentConfig `yaml:"nonce_storage"`
+	Issuer         string                     `yaml:"issuer"`
+	ExpirationTime time.Duration              `yaml:"expiration_time"`
+	MaxSkew        time.Duration              `yaml:"max_skew"`
+	NonceLength    int                        `yaml:"nonce_length"`
+	PrivateKey     RegistrableComponentConfig `yaml:"private_key"`
 }
 
 type RegistrableComponentConfig struct {
@@ -99,19 +99,38 @@ type RegistrableComponentConfig struct {
 }
 
 // DefaultConfig is a configuration that can be used as a fallback value.
-var DefaultConfig = configFile{
-	JWTProxy: &Config{
-	//TODO
-	},
+func DefaultConfig() Config {
+	return Config{
+		SignerProxy: SignerProxyConfig{
+			ListenAddr: ":8080",
+			Signer: SignerConfig{
+				Issuer:         "jwtproxy",
+				ExpirationTime: 5 * time.Minute,
+				MaxSkew:        1 * time.Minute,
+			},
+		},
+		VerifierProxy: VerifierProxyConfig{
+			ListenAddr: ":8081",
+			Verifier: VerifierConfig{
+				MaxTTL: 5 * time.Minute,
+				NonceStorage: RegistrableComponentConfig{
+					Type: "local",
+					Options: map[string]interface{}{
+						"PurgeInterval": 10 * time.Minute,
+					},
+				},
+			},
+		},
+	}
 }
 
 // Load is a shortcut to open a file, read it, and generate a Config.
-// It supports relative and absolute paths.
+// It supports relative and absolute paths. Given "", it returns DefaultConfig.
 func Load(path string) (config *Config, err error) {
-	cFile := &DefaultConfig
+	var cfgFile configFile
+	cfgFile.JWTProxy = DefaultConfig()
 	if path == "" {
-		err = fmt.Errorf("A configuration file is required")
-		return
+		return &cfgFile.JWTProxy, nil
 	}
 
 	f, err := os.Open(os.ExpandEnv(path))
@@ -125,16 +144,11 @@ func Load(path string) (config *Config, err error) {
 		return
 	}
 
-	err = yaml.Unmarshal(d, cFile)
+	err = yaml.Unmarshal(d, &cfgFile)
 	if err != nil {
 		return
 	}
+	config = &cfgFile.JWTProxy
 
-	config = cFile.JWTProxy
 	return
-}
-
-type RegistrableComponentConfig struct {
-	Type    string                 `yaml:"type"`
-	Options map[string]interface{} `yaml:"options"`
 }
