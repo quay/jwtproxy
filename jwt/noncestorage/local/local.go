@@ -15,9 +15,10 @@
 package local
 
 import (
-	"encoding/json"
 	"math/rand"
 	"time"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
@@ -42,17 +43,17 @@ type Local struct {
 }
 
 type Config struct {
-	Length        int
-	PurgeInterval time.Duration
+	Length        int           `yaml:"length"`
+	PurgeInterval time.Duration `yaml:"purge_interval"`
 }
 
 func constructor(registrableComponentConfig config.RegistrableComponentConfig) (noncestorage.NonceStorage, error) {
 	var cfg Config
-	bytes, err := json.Marshal(registrableComponentConfig.Options)
+	bytes, err := yaml.Marshal(registrableComponentConfig.Options)
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(bytes, &cfg)
+	err = yaml.Unmarshal(bytes, &cfg)
 	if err != nil {
 		return nil, err
 	}

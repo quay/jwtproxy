@@ -17,11 +17,12 @@ package preshared
 import (
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt/privatekey"
@@ -37,17 +38,17 @@ type Preshared struct {
 }
 
 type Config struct {
-	KeyID          string
-	PrivateKeyPath string
+	KeyID          string `yaml:"key_id"`
+	PrivateKeyPath string `yaml:"private_key_path"`
 }
 
 func constructor(registrableComponentConfig config.RegistrableComponentConfig) (privatekey.PrivateKey, error) {
 	var cfg Config
-	bytes, err := json.Marshal(registrableComponentConfig.Options)
+	bytes, err := yaml.Marshal(registrableComponentConfig.Options)
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(bytes, &cfg)
+	err = yaml.Unmarshal(bytes, &cfg)
 	if err != nil {
 		return nil, err
 	}

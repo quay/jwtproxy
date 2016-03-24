@@ -119,15 +119,6 @@ func Load(path string) (config *Config, err error) {
 
 // TODO: Integrate me.
 type RegistrableComponentConfig struct {
-	Type    string      `yaml:"type"`
-	Options interface{} `yaml:"options"`
-}
-
-func LoadRegistrableConfigOptions(registrableComponentConfig RegistrableComponentConfig, target interface{}) error {
-	bytes, err := yaml.Marshal(registrableComponentConfig.Options)
-	if err != nil {
-		return err
-	}
-
-	return yaml.Unmarshal(bytes, target)
+	Type    string                 `yaml:"type"`
+	Options map[string]interface{} `yaml:"options"`
 }
