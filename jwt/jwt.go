@@ -38,7 +38,7 @@ func Sign(req *http.Request, issuer string, key *key.PrivateKey, nonceGenerator 
 	claims := jose.Claims{
 		"kid": key.ID(),
 		"iss": issuer,
-		"aud": req.URL.Host,
+		"aud": req.URL.String(),
 		"iat": time.Now().Unix(),
 		"nbf": time.Now().Add(-maxSkew).Unix(),
 		"exp": time.Now().Add(maxSkew).Unix(),
@@ -128,5 +128,5 @@ func verifyAudience(actual string, expected *url.URL) bool {
 	if err != nil {
 		return false
 	}
-	return strings.EqualFold(actualURL.Host+actualURL.Path, expected.Host+expected.Path)
+	return strings.EqualFold(actualURL.Scheme+actualURL.Host, expected.Scheme+expected.Host)
 }
