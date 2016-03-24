@@ -31,9 +31,15 @@ type ProxyHandler func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *
 
 func NewProxy(proxyHandler ProxyHandler, caKeyPath, caCertPath string) (*goproxy.ProxyHttpServer, error) {
 	// Initialize the forward proxy's MITM handler using the specified CA key pair.
-	mitmHandler, err := setupMITMHandler(caKeyPath, caCertPath)
-	if err != nil {
-		return nil, err
+	var mitmHandler goproxy.FuncHttpsHandler
+	if caKeyPath == "" || caCertPath == "" {
+		log.Warning("No CA keypair specified, the proxy will not be able to forward requests to TLS endpoints.")
+	} else {
+		var err error
+		mitmHandler, err = setupMITMHandler(caKeyPath, caCertPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Create a forward proxy.
@@ -47,7 +53,9 @@ func NewProxy(proxyHandler ProxyHandler, caKeyPath, caCertPath string) (*goproxy
 
 	// Handle HTTPs requests with MITM and the specified handler.
 	p = proxy.OnRequest(goproxy.Not(goproxy.ReqHostMatches(regexp.MustCompile(httpRegexp))))
-	p.HandleConnect(mitmHandler)
+	if mitmHandler != nil {
+		p.HandleConnect(mitmHandler)
+	}
 	p.DoFunc(proxyHandler)
 
 	return proxy, nil

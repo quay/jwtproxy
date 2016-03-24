@@ -16,37 +16,50 @@ package jwt
 
 import (
 	"errors"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
-	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
 	"github.com/coreos/go-oidc/jose"
 	"github.com/coreos/go-oidc/key"
 	"github.com/coreos/go-oidc/oidc"
+
+	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
+	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
 )
 
-func Sign(req *http.Request, issuer string, key *key.PrivateKey, nonceGenerator noncestorage.NonceStorage, maxSkew time.Duration) error {
-	// Create Claims.
-	nonce, err := nonceGenerator.Generate()
-	if err != nil {
-		return err
-	}
+const (
+	nonceBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/"
+	nonceIdxBits = 6                   // 6 bits to represent a nonce index
+	nonceIdxMask = 1<<nonceIdxBits - 1 // All 1-bits, as many as nonceIdxBits
+	nonceIdxMax  = 63 / nonceIdxBits   // # of nonce indices fitting in 63 bits
+)
 
+var randSource rand.Source
+
+func init() {
+	randSource = rand.NewSource(time.Now().UnixNano())
+}
+
+func Sign(req *http.Request, issuer string, key *key.PrivateKey, nonceLength int, expirationTime, maxSkew time.Duration) error {
+	// Create Claims.
 	claims := jose.Claims{
 		"kid": key.ID(),
 		"iss": issuer,
 		"aud": req.URL.String(),
 		"iat": time.Now().Unix(),
 		"nbf": time.Now().Add(-maxSkew).Unix(),
-		"exp": time.Now().Add(maxSkew).Unix(),
-		"jti": nonce,
+		"exp": time.Now().Add(expirationTime).Unix(),
+		"jti": generateNonce(nonceLength),
 	}
 
 	// Create JWT.
 	jwt, err := jose.NewSignedJWT(claims, key.Signer())
+	if err != nil {
+		return err
+	}
 
 	// Add it as a header in the request.
 	req.Header.Add("Authorization", "Bearer "+jwt.Encode())
@@ -129,4 +142,21 @@ func verifyAudience(actual string, expected *url.URL) bool {
 		return false
 	}
 	return strings.EqualFold(actualURL.Scheme+actualURL.Host, expected.Scheme+expected.Host)
+}
+
+// https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
+func generateNonce(n int) string {
+	b := make([]byte, n)
+	for i, cache, remain := n-1, randSource.Int63(), nonceIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = randSource.Int63(), nonceIdxMax
+		}
+		if idx := int(cache & nonceIdxMask); idx < len(nonceBytes) {
+			b[i] = nonceBytes[idx]
+			i--
+		}
+		cache >>= nonceIdxBits
+		remain--
+	}
+	return string(b)
 }

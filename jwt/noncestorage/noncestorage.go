@@ -25,7 +25,6 @@ type NonceStorageConstructor func(config.RegistrableComponentConfig) (NonceStora
 
 type NonceStorage interface {
 	Verify(nonce string, expiration time.Time) bool
-	Generate() (string, error)
 }
 
 var storages = make(map[string]NonceStorageConstructor)

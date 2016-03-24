@@ -15,35 +15,85 @@
 package jwt
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/coreos-inc/jwtproxy/proxy"
 	"github.com/quentin-m/goproxy"
+
+	"github.com/coreos-inc/jwtproxy/config"
+	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
+	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
+	"github.com/coreos-inc/jwtproxy/jwt/privatekey"
+	"github.com/coreos-inc/jwtproxy/proxy"
 )
 
-func NewJWTSignerHandler() proxy.ProxyHandler {
-	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		// TODO JWT.
-		fmt.Println("Signing request")
-		r.Header.Set("X-Jwt-Token", "yxorPoG-X")
-
-		return r, nil
+func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.ProxyHandler, error) {
+	// Verify config (required keys that have no defaults).
+	if cfg.PrivateKey.Type == "" {
+		return nil, errors.New("no private key provider specified")
 	}
+
+	// Get the private key that will be used for signing.
+	privateKeyProvider, err := privatekey.New(cfg.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	privateKey, err := privateKeyProvider.GetPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a ProxyHandler that will add a JWT to http.Requests.
+	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
+		if err := Sign(r, cfg.Issuer, privateKey, cfg.NonceLength, cfg.ExpirationTime, cfg.MaxSkew); err != nil {
+			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusBadGateway, fmt.Sprintf("jwtproxy: unable to sign request: %s", err))
+		}
+		return r, nil
+	}, nil
 }
 
-func NewJWTVerifierHandler(upstream *url.URL) proxy.ProxyHandler {
+func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.ProxyHandler, error) {
+	// Verify config (required keys that have no defaults).
+	if cfg.Upstream.URL == nil {
+		return nil, errors.New("no upstream specified")
+	}
+	if cfg.Audience.URL == nil {
+		return nil, errors.New("no audience specified")
+	}
+	if cfg.KeyServer.Type == "" {
+		return nil, errors.New("no key server specified")
+	}
+
+	// Create a KeyServer that will provide public keys for signature verification.
+	keyServer, err := keyserver.NewReader(cfg.KeyServer)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a NonceStorage that will create nonces for signing.
+	nonceStorage, err := noncestorage.New(cfg.NonceStorage)
+	if err != nil {
+		return nil, err
+	}
+
+	if cfg.Upstream.URL == nil {
+		return nil, errors.New("could not start verifier handler: no upstream set")
+	}
+
+	// Create a reverse ProxyHandler that will verify JWT from http.Requests.
 	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		// TODO JWT.
-		fmt.Println("Detected JWT Token:" + r.Header.Get("X-Jwt-Token"))
+		if err = Verify(r, keyServer, nonceStorage, cfg.Audience.URL, cfg.MaxTTL); err != nil {
+			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusForbidden, fmt.Sprintf("jwtproxy: unable to verify request: %s", err))
+		}
 
 		// Route the request to upstream.
-		rerouteRequest(r, upstream)
+		rerouteRequest(r, cfg.Upstream.URL)
 
 		return r, nil
-	}
+	}, nil
 }
 
 func rerouteRequest(r *http.Request, upstream *url.URL) {
