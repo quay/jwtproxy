@@ -85,12 +85,16 @@ type VerifierConfig struct {
 	NonceStorage RegistrableComponentConfig `yaml:"nonce_storage"`
 }
 
+type SignerParams struct {
+	Issuer         string        `yaml:"issuer"`
+	ExpirationTime time.Duration `yaml:"expiration_time"`
+	MaxSkew        time.Duration `yaml:"max_skew"`
+	NonceLength    int           `yaml:"nonce_length"`
+}
+
 type SignerConfig struct {
-	Issuer         string                     `yaml:"issuer"`
-	ExpirationTime time.Duration              `yaml:"expiration_time"`
-	MaxSkew        time.Duration              `yaml:"max_skew"`
-	NonceLength    int                        `yaml:"nonce_length"`
-	PrivateKey     RegistrableComponentConfig `yaml:"private_key"`
+	SignerParams
+	PrivateKey RegistrableComponentConfig `yaml:"private_key"`
 }
 
 type RegistrableComponentConfig struct {
@@ -104,9 +108,11 @@ func DefaultConfig() Config {
 		SignerProxy: SignerProxyConfig{
 			ListenAddr: ":8080",
 			Signer: SignerConfig{
-				Issuer:         "jwtproxy",
-				ExpirationTime: 5 * time.Minute,
-				MaxSkew:        1 * time.Minute,
+				SignerParams: SignerParams{
+					Issuer:         "jwtproxy",
+					ExpirationTime: 5 * time.Minute,
+					MaxSkew:        1 * time.Minute,
+				},
 			},
 		},
 		VerifierProxy: VerifierProxyConfig{

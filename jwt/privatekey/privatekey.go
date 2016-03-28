@@ -25,7 +25,7 @@ type PrivateKey interface {
 	GetPrivateKey() (*key.PrivateKey, error)
 }
 
-type PrivateKeyConstructor func(config.RegistrableComponentConfig) (PrivateKey, error)
+type PrivateKeyConstructor func(config.RegistrableComponentConfig, config.SignerParams) (PrivateKey, error)
 
 var privatekeys = make(map[string]PrivateKeyConstructor)
 
@@ -39,10 +39,10 @@ func Register(name string, pkc PrivateKeyConstructor) {
 	privatekeys[name] = pkc
 }
 
-func New(cfg config.RegistrableComponentConfig) (PrivateKey, error) {
+func New(cfg config.RegistrableComponentConfig, params config.SignerParams) (PrivateKey, error) {
 	pkc, ok := privatekeys[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("server: unknown PrivateKeyConstructor %q (forgotten import?)", cfg.Type)
 	}
-	return pkc(cfg)
+	return pkc(cfg, params)
 }

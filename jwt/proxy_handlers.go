@@ -37,19 +37,20 @@ func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.ProxyHandler, error) {
 	}
 
 	// Get the private key that will be used for signing.
-	privateKeyProvider, err := privatekey.New(cfg.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
-	privateKey, err := privateKeyProvider.GetPrivateKey()
+	privateKeyProvider, err := privatekey.New(cfg.PrivateKey, cfg.SignerParams)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a ProxyHandler that will add a JWT to http.Requests.
 	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		if err := Sign(r, cfg.Issuer, privateKey, cfg.NonceLength, cfg.ExpirationTime, cfg.MaxSkew); err != nil {
-			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusBadGateway, fmt.Sprintf("jwtproxy: unable to sign request: %s", err))
+		privateKey, err := privateKeyProvider.GetPrivateKey()
+		if err != nil {
+			return r, errorResponse(r, err)
+		}
+
+		if err := Sign(r, privateKey, cfg.SignerParams); err != nil {
+			return r, errorResponse(r, err)
 		}
 		return r, nil
 	}, nil
@@ -94,6 +95,10 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.ProxyHandler, error
 
 		return r, nil
 	}, nil
+}
+
+func errorResponse(r *http.Request, err error) *http.Response {
+	return goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusBadGateway, fmt.Sprintf("jwtproxy: unable to sign request: %s", err))
 }
 
 func rerouteRequest(r *http.Request, upstream *url.URL) {

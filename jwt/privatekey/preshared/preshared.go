@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/coreos/go-oidc/key"
 	"gopkg.in/yaml.v2"
 
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt/privatekey"
-	"github.com/coreos/go-oidc/key"
 )
 
 func init() {
@@ -42,7 +42,7 @@ type Config struct {
 	PrivateKeyPath string `yaml:"private_key_path"`
 }
 
-func constructor(registrableComponentConfig config.RegistrableComponentConfig) (privatekey.PrivateKey, error) {
+func constructor(registrableComponentConfig config.RegistrableComponentConfig, _ config.SignerParams) (privatekey.PrivateKey, error) {
 	var cfg Config
 	bytes, err := yaml.Marshal(registrableComponentConfig.Options)
 	if err != nil {

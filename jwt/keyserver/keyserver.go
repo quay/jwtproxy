@@ -22,15 +22,15 @@ import (
 )
 
 type ReaderConstructor func(config.RegistrableComponentConfig) (Reader, error)
-type ManagerConstructor func(config.RegistrableComponentConfig) (Manager, error)
+type ManagerConstructor func(config.RegistrableComponentConfig, config.SignerParams) (Manager, error)
 
 type Reader interface {
 	GetPublicKey(issuer string, keyID string) (*key.PublicKey, error)
 }
 
 type Manager interface {
-	PublishPublicKey(issuer string, key *key.PublicKey, signingKey *key.PrivateKey) error
-	DeletePublicKey(issuer string, keyID string, signingKey *key.PrivateKey) error
+	PublishPublicKey(key *key.PublicKey, signingKey *key.PrivateKey) *PublishResult
+	DeletePublicKey(keyID string, signingKey *key.PrivateKey) error
 }
 
 var readers = make(map[string]ReaderConstructor)
@@ -64,10 +64,10 @@ func RegisterManager(name string, mc ManagerConstructor) {
 	managers[name] = mc
 }
 
-func NewManager(cfg config.RegistrableComponentConfig) (Manager, error) {
+func NewManager(cfg config.RegistrableComponentConfig, signerParams config.SignerParams) (Manager, error) {
 	mc, ok := managers[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("server: unknown ReaderConstructor %q (forgotten import?)", cfg.Type)
 	}
-	return mc(cfg)
+	return mc(cfg, signerParams)
 }

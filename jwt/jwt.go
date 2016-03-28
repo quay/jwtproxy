@@ -26,6 +26,7 @@ import (
 	"github.com/coreos/go-oidc/key"
 	"github.com/coreos/go-oidc/oidc"
 
+	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
 	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
 )
@@ -43,16 +44,16 @@ func init() {
 	randSource = rand.NewSource(time.Now().UnixNano())
 }
 
-func Sign(req *http.Request, issuer string, key *key.PrivateKey, nonceLength int, expirationTime, maxSkew time.Duration) error {
+func Sign(req *http.Request, key *key.PrivateKey, params config.SignerParams) error {
 	// Create Claims.
 	claims := jose.Claims{
 		"kid": key.ID(),
-		"iss": issuer,
+		"iss": params.Issuer,
 		"aud": req.URL.String(),
 		"iat": time.Now().Unix(),
-		"nbf": time.Now().Add(-maxSkew).Unix(),
-		"exp": time.Now().Add(expirationTime).Unix(),
-		"jti": generateNonce(nonceLength),
+		"nbf": time.Now().Add(-params.MaxSkew).Unix(),
+		"exp": time.Now().Add(params.ExpirationTime).Unix(),
+		"jti": generateNonce(params.NonceLength),
 	}
 
 	// Create JWT.
