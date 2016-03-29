@@ -27,9 +27,9 @@ import (
 
 const httpRegexp = `^.*:80$`
 
-type ProxyHandler func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response)
+type Handler func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response)
 
-func NewProxy(proxyHandler ProxyHandler, caKeyPath, caCertPath string) (*goproxy.ProxyHttpServer, error) {
+func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string) (*goproxy.ProxyHttpServer, error) {
 	// Initialize the forward proxy's MITM handler using the specified CA key pair.
 	var mitmHandler goproxy.FuncHttpsHandler
 	if caKeyPath == "" || caCertPath == "" {
@@ -61,7 +61,7 @@ func NewProxy(proxyHandler ProxyHandler, caKeyPath, caCertPath string) (*goproxy
 	return proxy, nil
 }
 
-func NewReverseProxy(proxyHandler ProxyHandler) (*goproxy.ProxyHttpServer, error) {
+func NewReverseProxy(proxyHandler Handler) (*goproxy.ProxyHttpServer, error) {
 	// Create a reverse proxy.
 	reverseProxy := goproxy.NewReverseProxyHttpServer()
 	reverseProxy.Tr = &http.Transport{}

@@ -30,32 +30,33 @@ import (
 	"github.com/coreos-inc/jwtproxy/proxy"
 )
 
-func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.ProxyHandler, error) {
+func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.Handler, error) {
 	// Verify config (required keys that have no defaults).
 	if cfg.PrivateKey.Type == "" {
 		return nil, errors.New("no private key provider specified")
 	}
 
 	// Get the private key that will be used for signing.
-	privateKeyProvider, err := privatekey.New(cfg.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
-	privateKey, err := privateKeyProvider.GetPrivateKey()
+	privateKeyProvider, err := privatekey.New(cfg.PrivateKey, cfg.SignerParams)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create a ProxyHandler that will add a JWT to http.Requests.
+	// Create a proxy.Handler that will add a JWT to http.Requests.
 	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		if err := Sign(r, cfg.Issuer, privateKey, cfg.NonceLength, cfg.ExpirationTime, cfg.MaxSkew); err != nil {
-			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusBadGateway, fmt.Sprintf("jwtproxy: unable to sign request: %s", err))
+		privateKey, err := privateKeyProvider.GetPrivateKey()
+		if err != nil {
+			return r, errorResponse(r, err)
+		}
+
+		if err := Sign(r, privateKey, cfg.SignerParams); err != nil {
+			return r, errorResponse(r, err)
 		}
 		return r, nil
 	}, nil
 }
 
-func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.ProxyHandler, error) {
+func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.Handler, error) {
 	// Verify config (required keys that have no defaults).
 	if cfg.Upstream.URL == nil {
 		return nil, errors.New("no upstream specified")
@@ -83,7 +84,7 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.ProxyHandler, error
 		return nil, errors.New("could not start verifier handler: no upstream set")
 	}
 
-	// Create a reverse ProxyHandler that will verify JWT from http.Requests.
+	// Create a reverse proxy.Handler that will verify JWT from http.Requests.
 	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 		if err = Verify(r, keyServer, nonceStorage, cfg.Audience.URL, cfg.MaxTTL); err != nil {
 			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusForbidden, fmt.Sprintf("jwtproxy: unable to verify request: %s", err))
@@ -94,6 +95,10 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.ProxyHandler, error
 
 		return r, nil
 	}, nil
+}
+
+func errorResponse(r *http.Request, err error) *http.Response {
+	return goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusBadGateway, fmt.Sprintf("jwtproxy: unable to sign request: %s", err))
 }
 
 func rerouteRequest(r *http.Request, upstream *url.URL) {

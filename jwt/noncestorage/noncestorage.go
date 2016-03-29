@@ -21,15 +21,15 @@ import (
 	"github.com/coreos-inc/jwtproxy/config"
 )
 
-type NonceStorageConstructor func(config.RegistrableComponentConfig) (NonceStorage, error)
+type Constructor func(config.RegistrableComponentConfig) (NonceStorage, error)
 
 type NonceStorage interface {
 	Verify(nonce string, expiration time.Time) bool
 }
 
-var storages = make(map[string]NonceStorageConstructor)
+var storages = make(map[string]Constructor)
 
-func Register(name string, nsc NonceStorageConstructor) {
+func Register(name string, nsc Constructor) {
 	if nsc == nil {
 		panic("server: could not register nil NonceStorage")
 	}
