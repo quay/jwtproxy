@@ -30,7 +30,7 @@ import (
 	"github.com/coreos-inc/jwtproxy/proxy"
 )
 
-func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.ProxyHandler, error) {
+func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.Handler, error) {
 	// Verify config (required keys that have no defaults).
 	if cfg.PrivateKey.Type == "" {
 		return nil, errors.New("no private key provider specified")
@@ -42,7 +42,7 @@ func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.ProxyHandler, error) {
 		return nil, err
 	}
 
-	// Create a ProxyHandler that will add a JWT to http.Requests.
+	// Create a proxy.Handler that will add a JWT to http.Requests.
 	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 		privateKey, err := privateKeyProvider.GetPrivateKey()
 		if err != nil {
@@ -56,7 +56,7 @@ func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.ProxyHandler, error) {
 	}, nil
 }
 
-func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.ProxyHandler, error) {
+func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.Handler, error) {
 	// Verify config (required keys that have no defaults).
 	if cfg.Upstream.URL == nil {
 		return nil, errors.New("no upstream specified")
@@ -84,7 +84,7 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.ProxyHandler, error
 		return nil, errors.New("could not start verifier handler: no upstream set")
 	}
 
-	// Create a reverse ProxyHandler that will verify JWT from http.Requests.
+	// Create a reverse proxy.Handler that will verify JWT from http.Requests.
 	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 		if err = Verify(r, keyServer, nonceStorage, cfg.Audience.URL, cfg.MaxTTL); err != nil {
 			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusForbidden, fmt.Sprintf("jwtproxy: unable to verify request: %s", err))

@@ -25,16 +25,16 @@ type PrivateKey interface {
 	GetPrivateKey() (*key.PrivateKey, error)
 }
 
-type PrivateKeyConstructor func(config.RegistrableComponentConfig, config.SignerParams) (PrivateKey, error)
+type Constructor func(config.RegistrableComponentConfig, config.SignerParams) (PrivateKey, error)
 
-var privatekeys = make(map[string]PrivateKeyConstructor)
+var privatekeys = make(map[string]Constructor)
 
-func Register(name string, pkc PrivateKeyConstructor) {
+func Register(name string, pkc Constructor) {
 	if pkc == nil {
-		panic("server: could not register nil PrivateKeyConstructor")
+		panic("server: could not register nil Constructor")
 	}
 	if _, dup := privatekeys[name]; dup {
-		panic("server: could not register duplicate PrivateKeyConstructor: " + name)
+		panic("server: could not register duplicate Constructor: " + name)
 	}
 	privatekeys[name] = pkc
 }
@@ -42,7 +42,7 @@ func Register(name string, pkc PrivateKeyConstructor) {
 func New(cfg config.RegistrableComponentConfig, params config.SignerParams) (PrivateKey, error) {
 	pkc, ok := privatekeys[cfg.Type]
 	if !ok {
-		return nil, fmt.Errorf("server: unknown PrivateKeyConstructor %q (forgotten import?)", cfg.Type)
+		return nil, fmt.Errorf("server: unknown Constructor %q (forgotten import?)", cfg.Type)
 	}
 	return pkc(cfg, params)
 }
