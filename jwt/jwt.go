@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/jose"
 	"github.com/coreos/go-oidc/key"
 	"github.com/coreos/go-oidc/oidc"
@@ -72,18 +73,18 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 	// Extract token from request.
 	token, err := oidc.ExtractBearerToken(req)
 	if err != nil {
-		return errors.New("no JWT found")
+		return errors.New("No JWT found")
 	}
 
 	// Parse token.
 	jwt, err := jose.ParseJWT(token)
 	if err != nil {
-		return errors.New("could not parse JWT")
+		return errors.New("Could not parse JWT")
 	}
 
 	claims, err := jwt.Claims()
 	if err != nil {
-		return errors.New("could not parse JWT claims")
+		return errors.New("Could not parse JWT claims")
 	}
 
 	// Verify claims.
@@ -91,47 +92,53 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 
 	kid, exists, err := claims.StringClaim("kid")
 	if !exists || err != nil {
-		return errors.New("missing or invalid 'kid' claim")
+		return errors.New("Missing or invalid 'kid' claim")
 	}
 	iss, exists, err := claims.StringClaim("iss")
 	if !exists || err != nil {
-		return errors.New("missing or invalid 'iss' claim")
+		return errors.New("Missing or invalid 'iss' claim")
 	}
 	aud, exists, err := claims.StringClaim("aud")
 	if !exists || err != nil || !verifyAudience(aud, audience) {
-		return errors.New("missing or invalid 'aud' claim")
+		return errors.New("Missing or invalid 'aud' claim")
 	}
 	exp, exists, err := claims.TimeClaim("exp")
 	if !exists || err != nil || exp.Before(now) {
-		return errors.New("missing or invalid 'exp' claim")
+		return errors.New("Missing or invalid 'exp' claim")
 	}
 	nbf, exists, err := claims.TimeClaim("nbf")
 	if !exists || err != nil || nbf.After(now) {
-		return errors.New("missing or invalid 'nbf' claim")
+		return errors.New("Missing or invalid 'nbf' claim")
 	}
 	iat, exists, err := claims.TimeClaim("iat")
 	if !exists || err != nil {
-		return errors.New("missing or invalid 'iat' claim")
+		return errors.New("Missing or invalid 'iat' claim")
 	}
 	if exp.Sub(iat) > maxTTL {
-		return errors.New("'exp' is too far in the future")
+		return errors.New("Invalid 'exp' claim (too long)")
 	}
 	jti, exists, err := claims.StringClaim("jti")
 	if !exists || err != nil || !nonceVerifier.Verify(jti, exp) {
-		return errors.New("missing or invalid 'jti' claim")
+		return errors.New("Missing or invalid 'jti' claim")
 	}
 
 	// Verify signature.
 	publicKey, err := keyServer.GetPublicKey(iss, kid)
-	if err != nil {
+	if err == keyserver.ErrPublicKeyNotFound {
 		return err
+	} else if err != nil {
+		log.Errorf("Could not get public key from key server: %s", err)
+		return errors.New("Unexpected key server error")
 	}
+
 	verifier, err := publicKey.Verifier()
 	if err != nil {
-		return err
+		log.Errorf("Could not create JWT verifier for public key '%s': %s", publicKey.ID(), err)
+		return errors.New("Unexpected verifier initialization failure")
 	}
+
 	if verifier.Verify(jwt.Signature, []byte(jwt.Data())) != nil {
-		return errors.New("invalid JWT signature")
+		return errors.New("Invalid JWT signature")
 	}
 
 	return nil

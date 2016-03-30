@@ -15,10 +15,15 @@
 package keyserver
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos/go-oidc/key"
+)
+
+var (
+	ErrPublicKeyNotFound = errors.New("Could not find any matching public key")
 )
 
 type ReaderConstructor func(config.RegistrableComponentConfig) (Reader, error)

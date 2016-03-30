@@ -39,11 +39,17 @@ func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 		return nil, err
 	}
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, keyserver.ErrPublicKeyNotFound
+	} else if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Unexpected response code when looking for public key: got status code %d, expected 200", resp.StatusCode)
+	}
+
 	defer resp.Body.Close()
 	jsonDecoder := json.NewDecoder(resp.Body)
 	var pk key.PublicKey
 
-	err = jsonDecoder.Decode(pk)
+	err = jsonDecoder.Decode(&pk)
 	if err != nil {
 		return nil, err
 	}
