@@ -36,6 +36,7 @@ jwtproxy:
     verifier:
       upstream: http://localhost:8888/
       audience: https://localhost:8081/ # host used to talk to the verifier proxy
+      max_skew: 1m # maximum accepted skew for the iat claim
       max_ttl: 5m # maximum expiration duration that a JWT can be signed for to be accepted
       key_server:
         type: preshared
