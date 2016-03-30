@@ -47,7 +47,9 @@ type Config struct {
 }
 
 func constructor(registrableComponentConfig config.RegistrableComponentConfig, signerParams config.SignerParams) (privatekey.PrivateKey, error) {
-	var cfg Config
+	cfg := Config{
+		RotationInterval: 12 * time.Hour,
+	}
 	bytes, err := yaml.Marshal(registrableComponentConfig.Options)
 	if err != nil {
 		return nil, err
