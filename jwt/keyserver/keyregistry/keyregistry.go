@@ -12,6 +12,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/key"
+	"github.com/pmylund/go-cache"
 	"gopkg.in/yaml.v2"
 
 	"github.com/coreos-inc/jwtproxy/config"
@@ -25,20 +26,35 @@ func init() {
 }
 
 type Client struct {
+	cache        *cache.Cache
 	Registry     *url.URL
 	SignerParams config.SignerParams
 }
 
 type Config struct {
 	Registry config.URL `yaml:"registry"`
+	Cache    *CacheConfig
+}
+
+type CacheConfig struct {
+	Duration      time.Duration `yaml:"duration"`
+	PurgeInterval time.Duration `yaml:"purge_interval"`
 }
 
 func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, error) {
+	// Query cache for public key.
+	if krc.cache != nil {
+		if cpk, found := krc.cache.Get(issuer + keyID); found {
+			pk := cpk.(key.PublicKey)
+			return &pk, nil
+		}
+	}
+
+	// Query key registry for a public key matching the given issuer and key ID.
 	resp, err := http.Get(krc.absURL("services", issuer, "keys", keyID))
 	if err != nil {
 		return nil, err
 	}
-
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, keyserver.ErrPublicKeyNotFound
 	} else if resp.StatusCode != http.StatusOK {
@@ -46,12 +62,18 @@ func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 	}
 
 	defer resp.Body.Close()
-	jsonDecoder := json.NewDecoder(resp.Body)
-	var pk key.PublicKey
 
+	// Decode the public key we received as a JSON-encoded JWK.
+	var pk key.PublicKey
+	jsonDecoder := json.NewDecoder(resp.Body)
 	err = jsonDecoder.Decode(&pk)
 	if err != nil {
 		return nil, err
+	}
+
+	// Cache the public key.
+	if krc.cache != nil {
+		krc.cache.Set(issuer+keyID, pk, cache.DefaultExpiration)
 	}
 
 	return &pk, nil
@@ -207,8 +229,24 @@ func constructor(registrableComponentConfig config.RegistrableComponentConfig) (
 	if err != nil {
 		return nil, err
 	}
+
+	// Initialize a cache if configured.
+	var c *cache.Cache
+	if cfg.Cache != nil {
+		if cfg.Cache.Duration == 0 {
+			log.Warning("Key registry is configured to cache public keys but no expiration has been set. This could lead to memory outage.")
+		} else if cfg.Cache.Duration > 0 && cfg.Cache.PurgeInterval <= 0 {
+			log.Fatal("Key registry is configured to cache public keys, which have an expiration time, but no purge interval has been set.")
+		}
+
+		c = cache.New(cfg.Cache.Duration, cfg.Cache.PurgeInterval)
+	} else {
+		log.Info("Key registry is not configured to use a cache. This could introduce undesired latency during signature verification.")
+	}
+
 	return &Client{
 		Registry: cfg.Registry.URL,
+		cache:    c,
 	}, nil
 }
 
