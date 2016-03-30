@@ -69,7 +69,7 @@ func Sign(req *http.Request, key *key.PrivateKey, params config.SignerParams) er
 	return nil
 }
 
-func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncestorage.NonceStorage, audience *url.URL, maxTTL time.Duration) error {
+func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncestorage.NonceStorage, audience *url.URL, maxSkew time.Duration, maxTTL time.Duration) error {
 	// Extract token from request.
 	token, err := oidc.ExtractBearerToken(req)
 	if err != nil {
@@ -111,7 +111,7 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 		return errors.New("Missing or invalid 'nbf' claim")
 	}
 	iat, exists, err := claims.TimeClaim("iat")
-	if !exists || err != nil {
+	if !exists || err != nil || iat.Add(-maxSkew).After(now) {
 		return errors.New("Missing or invalid 'iat' claim")
 	}
 	if exp.Sub(iat) > maxTTL {

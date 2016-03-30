@@ -80,6 +80,7 @@ type SignerProxyConfig struct {
 type VerifierConfig struct {
 	Upstream     URL                        `yaml:"upstream"`
 	Audience     URL                        `yaml:"audience"`
+	MaxSkew      time.Duration              `yaml:"max_skew"`
 	MaxTTL       time.Duration              `yaml:"max_ttl"`
 	KeyServer    RegistrableComponentConfig `yaml:"key_server"`
 	NonceStorage RegistrableComponentConfig `yaml:"nonce_storage"`
@@ -119,11 +120,12 @@ func DefaultConfig() Config {
 		VerifierProxy: VerifierProxyConfig{
 			ListenAddr: ":8081",
 			Verifier: VerifierConfig{
-				MaxTTL: 5 * time.Minute,
+				MaxSkew: 5 * time.Minute,
+				MaxTTL:  5 * time.Minute,
 				NonceStorage: RegistrableComponentConfig{
 					Type: "local",
 					Options: map[string]interface{}{
-						"PurgeInterval": 10 * time.Minute,
+						"PurgeInterval": 1 * time.Minute,
 					},
 				},
 			},

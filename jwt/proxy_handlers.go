@@ -86,7 +86,7 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.Handler, error) {
 
 	// Create a reverse proxy.Handler that will verify JWT from http.Requests.
 	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		if err = Verify(r, keyServer, nonceStorage, cfg.Audience.URL, cfg.MaxTTL); err != nil {
+		if err = Verify(r, keyServer, nonceStorage, cfg.Audience.URL, cfg.MaxSkew, cfg.MaxTTL); err != nil {
 			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusForbidden, fmt.Sprintf("jwtproxy: unable to verify request: %s", err))
 		}
 
