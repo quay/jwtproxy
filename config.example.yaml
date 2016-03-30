@@ -34,17 +34,24 @@ jwtproxy:
     crt_file: localhost.crt
 
     verifier:
-      upstream: http://localhost:8888/
+      upstream: http://localhost:9090/
       audience: https://localhost:8081/ # host used to talk to the verifier proxy
       max_skew: 1m # maximum accepted skew for the iat claim
       max_ttl: 5m # maximum expiration duration that a JWT can be signed for to be accepted
+      #key_server:
+      #  type: preshared
+      #  options:
+      #    issuer: jwtproxy
+      #    key_id: mykey
+      #    public_key_path: mykey.crt
       key_server:
-        type: preshared
+        type: keyregistry
         options:
-          issuer: jwtproxy
-          key_id: mykey
-          public_key_path: mykey.crt
+          registry: http://localhost:8888/
+          cache:
+            duration: 10m # amount of time public keys are cached locally
+            purge_interval: 1m # interval between cache cleanups
       nonce_storage:
         type: local
         options:
-          purge_interval: 10m # interval between expired expired nonce cleanups
+          purge_interval: 1m # interval between expired expired nonce cleanups
