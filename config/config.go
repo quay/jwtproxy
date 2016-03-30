@@ -93,8 +93,8 @@ type SignerParams struct {
 }
 
 type SignerConfig struct {
-	SignerParams
-	PrivateKey RegistrableComponentConfig `yaml:"private_key"`
+	SignerParams `yaml:",inline"`
+	PrivateKey   RegistrableComponentConfig `yaml:"private_key"`
 }
 
 type RegistrableComponentConfig struct {
@@ -112,6 +112,7 @@ func DefaultConfig() Config {
 					Issuer:         "jwtproxy",
 					ExpirationTime: 5 * time.Minute,
 					MaxSkew:        1 * time.Minute,
+					NonceLength:    32,
 				},
 			},
 		},
