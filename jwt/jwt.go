@@ -50,7 +50,7 @@ func Sign(req *http.Request, key *key.PrivateKey, params config.SignerParams) er
 	claims := jose.Claims{
 		"kid": key.ID(),
 		"iss": params.Issuer,
-		"aud": req.URL.String(),
+		"aud": req.URL.Scheme + "://" + req.URL.Host,
 		"iat": time.Now().Unix(),
 		"nbf": time.Now().Add(-params.MaxSkew).Unix(),
 		"exp": time.Now().Add(params.ExpirationTime).Unix(),
@@ -149,7 +149,7 @@ func verifyAudience(actual string, expected *url.URL) bool {
 	if err != nil {
 		return false
 	}
-	return strings.EqualFold(actualURL.Scheme+actualURL.Host, expected.Scheme+expected.Host)
+	return strings.EqualFold(actualURL.Scheme+"://"+actualURL.Host, expected.Scheme+"://"+expected.Host)
 }
 
 // https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
