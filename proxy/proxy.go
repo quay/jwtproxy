@@ -34,6 +34,12 @@ func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string) (*goproxy.Prox
 	var mitmHandler goproxy.FuncHttpsHandler
 	if caKeyPath == "" || caCertPath == "" {
 		log.Warning("No CA keypair specified, the proxy will not be able to forward requests to TLS endpoints.")
+
+		var err error
+		mitmHandler, err = rejectMITMHandler()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		var err error
 		mitmHandler, err = setupMITMHandler(caKeyPath, caCertPath)
@@ -83,6 +89,14 @@ func setupMITMHandler(caKeyPath, caCertPath string) (goproxy.FuncHttpsHandler, e
 		return &goproxy.ConnectAction{
 			Action:    goproxy.ConnectMitm,
 			TLSConfig: goproxy.TLSConfigFromCA(ca),
+		}, host
+	}, nil
+}
+
+func rejectMITMHandler() (goproxy.FuncHttpsHandler, error) {
+	return func(host string, ctx *goproxy.ProxyCtx) (*goproxy.ConnectAction, string) {
+		return &goproxy.ConnectAction{
+			Action: goproxy.ConnectReject,
 		}, host
 	}, nil
 }
