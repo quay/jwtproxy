@@ -7,6 +7,11 @@ jwtproxy:
     ca_key_file: ca.key
     ca_crt_file: ca.crt
 
+    # Certificates to be trusted by the proxy when its MITM mechanism communicates with remotes.
+    # This is optional. Specifying it currently replaces system root certificates entirely.
+    trusted_certificates:
+    - localhost.crt
+
     signer:
       issuer: jwtproxy
       expiration_time: 5m

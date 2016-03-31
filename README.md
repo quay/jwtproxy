@@ -67,6 +67,10 @@ jwtproxy:
     ca_key_file: <path|nil>
     ca_crt_file: <path|nil>
 
+    # Certificates to be trusted by the proxy when its MITM mechanism communicates with remotes.
+    # This is optional. Specifying it currently replaces system root certificates entirely.
+    trusted_certificates: <[]string|system root certificates>
+
     signer:
       # Signing service name
       issuer: <string|nil>
@@ -219,3 +223,37 @@ nonce_storage:
     # How often we run the cache janitor to clean up expired nonces
     purge_interval: <time.Duration|0>
 ```
+
+
+### Generate keys
+
+## Generate forward proxy's CA certificate and private key
+
+When it comes to sign HTTPs requests, the forward proxy must *hijack* connections and act as a man-in-the-middle.
+Therefore, the proxy requires a CA certificate and private key in order to forge TLS/SSL certificates on behalf on the remote HTTPs server.
+If none are specified, the forward proxy will throw a warning at startup and refuse to proxy HTTPs requests.
+
+The following commands generate both, valid for a year, without any passphrase (otherwise, the proxy would require us to type it).
+
+```
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ca.key -out ca.crt
+```
+
+The certificate then has to be distributed and trusted by every clients that goes through the forward proxy.
+The private key must remain secret.
+
+The CA certificate and private key should be specified using the `ca_key_file` and `ca_crt_file` parameters in the [Signer configuration](#signer-config).
+
+## Generate reverse proxy's key pair
+
+To confirm reverse proxy's authenticity and to guarantee confidentiality and integrity of the exchanged data, the reverse proxy can terminate TLS/SSL using a public/private key pair.
+The key pair could either be provided by a trusted certificate authority or self-signed using the commands below:
+
+```
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout reverseProxy.key -out reverseProxy.crt
+```
+
+Note that to the question `Common Name (e.g. server FQDN or YOUR name)`, you must write the host that you expect to use for the reverse proxy.
+
+The key pair should be specified using the `key_file` and `crt_file` parameters in the [Verifier configuration](#verifier-config).
+Also, because the key pair is self-signed, the certificate must be trusted by the forward proxy. This can be done by trusting the certificate system-wide or by specifying it using the `trusted_certificates` list parameter in the [Signer configuration](#signer-config).

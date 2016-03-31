@@ -65,7 +65,7 @@ func main() {
 	}
 
 	// Create forward and reverse proxies.
-	forwardProxy, err := proxy.NewProxy(fwp, config.SignerProxy.CAKeyFile, config.SignerProxy.CACrtFile)
+	forwardProxy, err := proxy.NewProxy(fwp, config.SignerProxy.CAKeyFile, config.SignerProxy.CACrtFile, config.SignerProxy.TrustedCertificated)
 	if err != nil {
 		log.Fatalf("Failed to create forward proxy: %s", err)
 	}
