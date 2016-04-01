@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -51,7 +52,7 @@ func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 	}
 
 	// Query key registry for a public key matching the given issuer and key ID.
-	resp, err := http.Get(krc.absURL("services", issuer, "keys", keyID))
+	resp, err := http.Get(krc.absURL("services", issuer, "keys", keyID).String())
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +80,7 @@ func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 	return &pk, nil
 }
 
-func (krc *Client) PublishPublicKey(key *key.PublicKey, signingKey *key.PrivateKey) *keyserver.PublishResult {
+func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPolicy, signingKey *key.PrivateKey) *keyserver.PublishResult {
 	// Create a channel that will track the response status.
 	publishResult := keyserver.NewPublishResult()
 
@@ -92,8 +93,20 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, signingKey *key.PrivateK
 		}
 
 		// Create an HTTP request to the key server to publish a new key.
-		url := krc.absURL("services", krc.SignerParams.Issuer, "keys", key.ID())
-		resp, err := krc.signAndDo("PUT", url, bytes.NewReader(body), signingKey)
+		publishURL := krc.absURL("services", krc.SignerParams.Issuer, "keys", key.ID())
+
+		queryParams := publishURL.Query()
+		if policy.Expiration != nil {
+			log.Debug("Adding expiration time: ", policy.Expiration)
+			queryParams.Add("expiration", strconv.FormatInt(policy.Expiration.Unix(), 10))
+		}
+		if policy.RotationPolicy != nil {
+			log.Debug("Adding rotation time: ", policy.RotationPolicy)
+			queryParams.Add("rotation", strconv.Itoa(int(policy.RotationPolicy.Seconds())))
+		}
+		publishURL.RawQuery = queryParams.Encode()
+
+		resp, err := krc.signAndDo("PUT", publishURL, bytes.NewReader(body), signingKey)
 		if err != nil {
 			publishResult.SetError(err)
 			return
@@ -116,16 +129,15 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, signingKey *key.PrivateK
 			// approval. Fire up a goroutine to watch whether it becomes
 			// published.
 			monPublishLog.Debug("Monitoring publish status")
+			monURL := krc.absURL("services", krc.SignerParams.Issuer, "keys", key.ID())
 
 			pollPeriod := time.NewTicker(1 * time.Second)
 			defer pollPeriod.Stop()
 
-			// TODO read this from the 202 response headers.
-			expirationTime := time.Now().Add(30 * time.Minute)
 			for {
 				select {
 				case <-pollPeriod.C:
-					checkPublished, err := krc.signAndDo("GET", url, nil, signingKey)
+					checkPublished, err := krc.signAndDo("GET", monURL, nil, signingKey)
 					if err != nil {
 						publishResult.SetError(err)
 						return
@@ -137,15 +149,11 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, signingKey *key.PrivateK
 						return
 					case 404:
 						monPublishLog.Debug("Key not yet published, waiting")
+					case http.StatusConflict:
+						monPublishLog.Debug("Key not yet approved, waiting")
 					default:
 						checkPublishedErr := fmt.Errorf("Unexpected response code when checking publication status %d", checkPublished.StatusCode)
 						publishResult.SetError(checkPublishedErr)
-						return
-					}
-
-					if time.Now().After(expirationTime) {
-						timedOutErr := fmt.Errorf("Key publication timed out before success")
-						publishResult.SetError(timedOutErr)
 						return
 					}
 
@@ -183,9 +191,9 @@ func (krc *Client) DeletePublicKey(keyID string, signingKey *key.PrivateKey) err
 	return nil
 }
 
-func (krc *Client) signAndDo(method, url string, body io.Reader, signingKey *key.PrivateKey) (*http.Response, error) {
+func (krc *Client) signAndDo(method string, url *url.URL, body io.Reader, signingKey *key.PrivateKey) (*http.Response, error) {
 	// Create an HTTP request to the key server to publish a new key.
-	req, err := http.NewRequest(method, url, body)
+	req, err := http.NewRequest(method, url.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +212,7 @@ func (krc *Client) signAndDo(method, url string, body io.Reader, signingKey *key
 	return http.DefaultClient.Do(req)
 }
 
-func (krc *Client) absURL(pathParams ...string) string {
+func (krc *Client) absURL(pathParams ...string) *url.URL {
 	escaped := make([]string, 0, len(pathParams)+1)
 	escaped = append(escaped, krc.Registry.Path)
 	for _, pathParam := range pathParams {
@@ -216,7 +224,7 @@ func (krc *Client) absURL(pathParams ...string) string {
 	if err != nil {
 		panic(err)
 	}
-	return krc.Registry.ResolveReference(relurl).String()
+	return krc.Registry.ResolveReference(relurl)
 }
 
 func constructor(registrableComponentConfig config.RegistrableComponentConfig) (*Client, error) {
