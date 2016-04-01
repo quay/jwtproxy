@@ -17,9 +17,11 @@ package keyserver
 import (
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/coreos/go-oidc/key"
 
 	"github.com/coreos-inc/jwtproxy/config"
-	"github.com/coreos/go-oidc/key"
 )
 
 var (
@@ -33,8 +35,13 @@ type Reader interface {
 	GetPublicKey(issuer string, keyID string) (*key.PublicKey, error)
 }
 
+type KeyPolicy struct {
+	Expiration     *time.Time
+	RotationPolicy *time.Duration
+}
+
 type Manager interface {
-	PublishPublicKey(key *key.PublicKey, signingKey *key.PrivateKey) *PublishResult
+	PublishPublicKey(key *key.PublicKey, policy *KeyPolicy, signingKey *key.PrivateKey) *PublishResult
 	DeletePublicKey(keyID string, signingKey *key.PrivateKey) error
 }
 
