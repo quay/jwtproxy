@@ -64,18 +64,20 @@ type Config struct {
 }
 
 type VerifierProxyConfig struct {
-	ListenAddr string         `yaml:"listen_addr"`
-	CrtFile    string         `yaml:"crt_file"`
-	KeyFile    string         `yaml:"key_file"`
-	Verifier   VerifierConfig `yaml:"verifier"`
+	ListenAddr      string         `yaml:"listen_addr"`
+	ShutdownTimeout time.Duration  `yaml:"shutdown_timeout"`
+	CrtFile         string         `yaml:"crt_file"`
+	KeyFile         string         `yaml:"key_file"`
+	Verifier        VerifierConfig `yaml:"verifier"`
 }
 
 type SignerProxyConfig struct {
-	ListenAddr          string       `yaml:"listen_addr"`
-	CAKeyFile           string       `yaml:"ca_key_file"`
-	CACrtFile           string       `yaml:"ca_crt_file"`
-	TrustedCertificated []string     `yaml:"trusted_certificates"`
-	Signer              SignerConfig `yaml:"signer"`
+	ListenAddr          string        `yaml:"listen_addr"`
+	ShutdownTimeout     time.Duration `yaml:"shutdown_timeout"`
+	CAKeyFile           string        `yaml:"ca_key_file"`
+	CACrtFile           string        `yaml:"ca_crt_file"`
+	TrustedCertificates []string      `yaml:"trusted_certificates"`
+	Signer              SignerConfig  `yaml:"signer"`
 }
 
 type VerifierConfig struct {
@@ -108,7 +110,8 @@ type RegistrableComponentConfig struct {
 func DefaultConfig() Config {
 	return Config{
 		SignerProxy: SignerProxyConfig{
-			ListenAddr: ":8080",
+			ListenAddr:      ":8080",
+			ShutdownTimeout: 1 * time.Minute,
 			Signer: SignerConfig{
 				SignerParams: SignerParams{
 					Issuer:         "jwtproxy",
@@ -119,7 +122,8 @@ func DefaultConfig() Config {
 			},
 		},
 		VerifierProxy: VerifierProxyConfig{
-			ListenAddr: ":8081",
+			ListenAddr:      ":8081",
+			ShutdownTimeout: 1 * time.Minute,
 			Verifier: VerifierConfig{
 				MaxSkew: 5 * time.Minute,
 				MaxTTL:  5 * time.Minute,

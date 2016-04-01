@@ -23,6 +23,7 @@ import (
 
 type PrivateKey interface {
 	GetPrivateKey() (*key.PrivateKey, error)
+	Stop()
 }
 
 type Constructor func(config.RegistrableComponentConfig, config.SignerParams) (PrivateKey, error)

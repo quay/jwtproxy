@@ -1,6 +1,7 @@
 jwtproxy:
   signer_proxy:
     listen_addr: :8080
+    shutdown_timeout: 1m
 
     # CA used to forge certificates used by
     # the proxy's MITM mechanism.
@@ -33,6 +34,7 @@ jwtproxy:
 
   verifier_proxy:
     listen_addr: :8081
+    shutdown_timeout: 1m
 
     # Key pair used to terminate TLS.
     key_file: localhost.key

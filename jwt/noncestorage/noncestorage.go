@@ -25,6 +25,7 @@ type Constructor func(config.RegistrableComponentConfig) (NonceStorage, error)
 
 type NonceStorage interface {
 	Verify(nonce string, expiration time.Time) bool
+	Stop()
 }
 
 var storages = make(map[string]Constructor)

@@ -3,6 +3,7 @@ package keyregistry
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -33,8 +34,8 @@ type Client struct {
 }
 
 type Config struct {
-	Registry config.URL `yaml:"registry"`
-	Cache    *CacheConfig
+	Registry config.URL   `yaml:"registry"`
+	Cache    *CacheConfig `yaml:"cache"`
 }
 
 type CacheConfig struct {
@@ -196,6 +197,10 @@ func (krc *Client) DeletePublicKey(keyID string, signingKey *key.PrivateKey) err
 	return nil
 }
 
+func (krc *Client) Stop() {
+
+}
+
 func (krc *Client) signAndDo(method string, url *url.URL, body io.Reader, signingKey *key.PrivateKey) (*http.Response, error) {
 	// Create an HTTP request to the key server to publish a new key.
 	req, err := http.NewRequest(method, url.String(), body)
@@ -249,12 +254,12 @@ func constructor(registrableComponentConfig config.RegistrableComponentConfig) (
 		if cfg.Cache.Duration == 0 {
 			log.Warning("Key registry is configured to cache public keys but no expiration has been set. This could lead to memory outage.")
 		} else if cfg.Cache.Duration > 0 && cfg.Cache.PurgeInterval <= 0 {
-			log.Fatal("Key registry is configured to cache public keys, which have an expiration time, but no purge interval has been set.")
+			return nil, errors.New("Key registry is configured to cache public keys, which have an expiration time, but no purge interval has been set.")
 		}
 
 		c = cache.New(cfg.Cache.Duration, cfg.Cache.PurgeInterval)
 	} else {
-		log.Info("Key registry is not configured to use a cache. This could introduce undesired latency during signature verification.")
+		log.Warning("Key registry is not configured to use a cache. This could introduce undesired latency during signature verification.")
 	}
 
 	return &Client{

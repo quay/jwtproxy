@@ -82,6 +82,10 @@ func (preshared *Preshared) GetPublicKey(issuer string, keyID string) (*key.Publ
 	return preshared.PublicKey, nil
 }
 
+func (preshared *Preshared) Stop() {
+
+}
+
 func loadPublicKey(path string) (*rsa.PublicKey, error) {
 	publicKeyData, err := ioutil.ReadFile(path)
 	if err != nil {

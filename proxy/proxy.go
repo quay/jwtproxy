@@ -19,18 +19,56 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"regexp"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/quentin-m/goproxy"
+	"github.com/tylerb/graceful"
 )
 
 const httpRegexp = `^.*:80$`
 
 type Handler func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response)
 
-func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertificatePaths []string) (*goproxy.ProxyHttpServer, error) {
+type Proxy struct {
+	*goproxy.ProxyHttpServer
+	grace *graceful.Server
+}
+
+func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string) error {
+	grace := &graceful.Server{
+		NoSignalHandling: true,
+		Server: &http.Server{
+			Addr:    listenAddr,
+			Handler: proxy.ProxyHttpServer,
+		},
+	}
+	proxy.grace = grace
+
+	var err error
+	if crtFile != "" && keyFile != "" {
+		err = grace.ListenAndServeTLS(crtFile, keyFile)
+	} else {
+		err = grace.ListenAndServe()
+	}
+
+	if err != nil {
+		if opErr, ok := err.(*net.OpError); !ok || (ok && opErr.Op != "accept") {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (proxy *Proxy) Stop(timeout time.Duration) {
+	proxy.grace.Stop(timeout)
+}
+
+func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertificatePaths []string) (*Proxy, error) {
 	var err error
 
 	// Initialize the forward proxy's MITM handler using the specified CA key pair.
@@ -68,10 +106,10 @@ func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertifi
 	}
 	p.DoFunc(proxyHandler)
 
-	return proxy, nil
+	return &Proxy{ProxyHttpServer: proxy}, nil
 }
 
-func NewReverseProxy(proxyHandler Handler) (*goproxy.ProxyHttpServer, error) {
+func NewReverseProxy(proxyHandler Handler) (*Proxy, error) {
 	// Create a reverse proxy.
 	reverseProxy := goproxy.NewReverseProxyHttpServer()
 	reverseProxy.Tr = &http.Transport{}
@@ -80,7 +118,7 @@ func NewReverseProxy(proxyHandler Handler) (*goproxy.ProxyHttpServer, error) {
 	// Handle requests with the specified handler.
 	reverseProxy.OnRequest().DoFunc(proxyHandler)
 
-	return reverseProxy, nil
+	return &Proxy{ProxyHttpServer: reverseProxy}, nil
 }
 
 func setupMITMHandler(caKeyPath, caCertPath string) (goproxy.FuncHttpsHandler, error) {

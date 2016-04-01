@@ -30,7 +30,12 @@ import (
 	"github.com/coreos-inc/jwtproxy/proxy"
 )
 
-func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.Handler, error) {
+type StoppableProxyHandler struct {
+	proxy.Handler
+	Stop func()
+}
+
+func NewJWTSignerHandler(cfg config.SignerConfig) (*StoppableProxyHandler, error) {
 	// Verify config (required keys that have no defaults).
 	if cfg.PrivateKey.Type == "" {
 		return nil, errors.New("no private key provider specified")
@@ -43,7 +48,7 @@ func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.Handler, error) {
 	}
 
 	// Create a proxy.Handler that will add a JWT to http.Requests.
-	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
+	handler := func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 		privateKey, err := privateKeyProvider.GetPrivateKey()
 		if err != nil {
 			return r, errorResponse(r, err)
@@ -53,10 +58,19 @@ func NewJWTSignerHandler(cfg config.SignerConfig) (proxy.Handler, error) {
 			return r, errorResponse(r, err)
 		}
 		return r, nil
+	}
+
+	stopper := func() {
+		privateKeyProvider.Stop()
+	}
+
+	return &StoppableProxyHandler{
+		Handler: handler,
+		Stop:    stopper,
 	}, nil
 }
 
-func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.Handler, error) {
+func NewJWTVerifierHandler(cfg config.VerifierConfig) (*StoppableProxyHandler, error) {
 	// Verify config (required keys that have no defaults).
 	if cfg.Upstream.URL == nil {
 		return nil, errors.New("no upstream specified")
@@ -85,7 +99,7 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.Handler, error) {
 	}
 
 	// Create a reverse proxy.Handler that will verify JWT from http.Requests.
-	return func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
+	handler := func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 		if err = Verify(r, keyServer, nonceStorage, cfg.Audience.URL, cfg.MaxSkew, cfg.MaxTTL); err != nil {
 			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusForbidden, fmt.Sprintf("jwtproxy: unable to verify request: %s", err))
 		}
@@ -94,6 +108,16 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (proxy.Handler, error) {
 		rerouteRequest(r, cfg.Upstream.URL)
 
 		return r, nil
+	}
+
+	stopper := func() {
+		keyServer.Stop()
+		nonceStorage.Stop()
+	}
+
+	return &StoppableProxyHandler{
+		Handler: handler,
+		Stop:    stopper,
 	}, nil
 }
 
