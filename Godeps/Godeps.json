@@ -7,8 +7,66 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.9.0-15-g219c8cb",
-			"Rev": "219c8cb75c258c552e999735be6df753ffc7afdc"
+			"Comment": "v0.10.0",
+			"Rev": "4b6ea7319e214d98c938f12692336f7ca9348d6b"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/http",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/jose",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/key",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/oauth2",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/oidc",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-systemd/journal",
+			"Comment": "v5",
+			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/capnslog",
+			"Rev": "1914e367e85eaf0c25d495b48e060dfe6190f8d0"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/health",
+			"Rev": "1914e367e85eaf0c25d495b48e060dfe6190f8d0"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/httputil",
+			"Rev": "1914e367e85eaf0c25d495b48e060dfe6190f8d0"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/timeutil",
+			"Rev": "1914e367e85eaf0c25d495b48e060dfe6190f8d0"
+		},
+		{
+			"ImportPath": "github.com/elazarl/goproxy",
+			"Comment": "v1.0-76-g1297773",
+			"Rev": "1297773012279f76319fd1fb89352d33c01e21c1"
+		},
+		{
+			"ImportPath": "github.com/inconshreveable/go-vhost",
+			"Rev": "8cbc5089df5ba3e44644d39e8d1ec375d6d842f9"
+		},
+		{
+			"ImportPath": "github.com/jonboulle/clockwork",
+			"Rev": "ed104f61ea4877bea08af6f759805674861e968d"
+		},
+		{
+			"ImportPath": "github.com/pmylund/go-cache",
+			"Rev": "1881a9bccb818787f68c52bfba648c6cf34c34fa"
 		},
 		{
 			"ImportPath": "github.com/quentin-m/goproxy",
@@ -16,8 +74,26 @@
 			"Rev": "68c684f60e7acc501496bf6c9752c286eb8044c7"
 		},
 		{
+			"ImportPath": "github.com/rogpeppe/go-charset/charset",
+			"Rev": "e9ff06f347d3f5d0013d59ed83754f0e88de10d4"
+		},
+		{
+			"ImportPath": "github.com/rogpeppe/go-charset/data",
+			"Rev": "e9ff06f347d3f5d0013d59ed83754f0e88de10d4"
+		},
+		{
 			"ImportPath": "golang.org/x/sys/unix",
 			"Rev": "9d4e42a20653790449273b3c85e67d6d8bae6e2e"
+		},
+		{
+			"ImportPath": "gopkg.in/airbrake/gobrake.v2",
+			"Comment": "v2.0.5",
+			"Rev": "ffa39d09712dfb3d20dc9b5564bb62cf6d8125d0"
+		},
+		{
+			"ImportPath": "gopkg.in/gemnasium/logrus-airbrake-hook.v2",
+			"Comment": "v2.0.0",
+			"Rev": "31e6fd4bd5a98d8ee7673d24bc54ec73c31810dd"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
