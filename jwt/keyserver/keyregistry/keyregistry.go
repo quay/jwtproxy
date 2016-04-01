@@ -59,7 +59,10 @@ func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, keyserver.ErrPublicKeyNotFound
 	} else if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Unexpected response code when looking for public key: got status code %d, expected 200", resp.StatusCode)
+		return nil, fmt.Errorf(
+			"Unexpected response code when looking for public key: got status code %d, expected 200",
+			resp.StatusCode,
+		)
 	}
 
 	defer resp.Body.Close()
@@ -112,22 +115,20 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 			return
 		}
 
-		// If it returns a 202, fire up a goroute to poll for when the key has been
-		// accepted and close the channel when it has.
 		switch resp.StatusCode {
-		case 200:
+		case http.StatusOK:
 			// Published successfully.
 			publishResult.Success()
 			return
-		case 202:
+		case http.StatusAccepted:
 			monPublishLog := log.WithFields(log.Fields{
-				"keyID":        key.ID(),
-				"signingKeyID": signingKey.ID(),
+				"keyID":        key.ID()[0:10],
+				"signingKeyID": signingKey.ID()[0:10],
 			})
 
 			// Our key couldn't be published immediately because it requires
-			// approval. Fire up a goroutine to watch whether it becomes
-			// published.
+			// approval. Loop until it becomes approved or the whole process
+			// gets canceled.
 			monPublishLog.Debug("Monitoring publish status")
 			monURL := krc.absURL("services", krc.SignerParams.Issuer, "keys", key.ID())
 
@@ -144,15 +145,16 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 					}
 
 					switch checkPublished.StatusCode {
-					case 200:
+					case http.StatusOK:
 						publishResult.Success()
 						return
-					case 404:
-						monPublishLog.Debug("Key not yet published, waiting")
 					case http.StatusConflict:
 						monPublishLog.Debug("Key not yet approved, waiting")
 					default:
-						checkPublishedErr := fmt.Errorf("Unexpected response code when checking publication status %d", checkPublished.StatusCode)
+						checkPublishedErr := fmt.Errorf(
+							"Unexpected response code when checking approval status %d",
+							checkPublished.StatusCode,
+						)
 						publishResult.SetError(checkPublishedErr)
 						return
 					}
@@ -167,7 +169,10 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 			}
 
 		default:
-			publishServerError := fmt.Errorf("Unexpected response code when publishing key: %d ", resp.StatusCode)
+			publishServerError := fmt.Errorf(
+				"Unexpected response code when publishing key: %d ",
+				resp.StatusCode,
+			)
 			publishResult.SetError(publishServerError)
 			return
 		}
