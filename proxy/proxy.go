@@ -35,10 +35,11 @@ type Handler func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.
 
 type Proxy struct {
 	*goproxy.ProxyHttpServer
-	grace *graceful.Server
+	grace           *graceful.Server
+	shutdownTimeout time.Duration
 }
 
-func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string) error {
+func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration) error {
 	grace := &graceful.Server{
 		NoSignalHandling: true,
 		Server: &http.Server{
@@ -47,6 +48,7 @@ func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string) error {
 		},
 	}
 	proxy.grace = grace
+	proxy.shutdownTimeout = shutdownTimeout
 
 	var err error
 	if crtFile != "" && keyFile != "" {
@@ -64,8 +66,8 @@ func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string) error {
 	return nil
 }
 
-func (proxy *Proxy) Stop(timeout time.Duration) {
-	proxy.grace.Stop(timeout)
+func (proxy *Proxy) Stop() {
+	proxy.grace.Stop(proxy.shutdownTimeout)
 }
 
 func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertificatePaths []string) (*Proxy, error) {

@@ -1,5 +1,6 @@
 jwtproxy:
   signer_proxy:
+    enabled: true
     listen_addr: :8080
     shutdown_timeout: 1m
 
@@ -33,6 +34,7 @@ jwtproxy:
               registry: http://localhost:8888/
 
   verifier_proxy:
+    enabled: true
     listen_addr: :8081
     shutdown_timeout: 1m
 
