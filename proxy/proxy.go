@@ -17,6 +17,7 @@ package proxy
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -29,19 +30,19 @@ const httpRegexp = `^.*:80$`
 
 type Handler func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response)
 
-func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string) (*goproxy.ProxyHttpServer, error) {
+func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertificatePaths []string) (*goproxy.ProxyHttpServer, error) {
+	var err error
+
 	// Initialize the forward proxy's MITM handler using the specified CA key pair.
 	var mitmHandler goproxy.FuncHttpsHandler
 	if caKeyPath == "" || caCertPath == "" {
 		log.Warning("No CA keypair specified, the proxy will not be able to forward requests to TLS endpoints.")
 
-		var err error
 		mitmHandler, err = rejectMITMHandler()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		var err error
 		mitmHandler, err = setupMITMHandler(caKeyPath, caCertPath)
 		if err != nil {
 			return nil, err
@@ -50,7 +51,10 @@ func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string) (*goproxy.Prox
 
 	// Create a forward proxy.
 	proxy := goproxy.NewProxyHttpServer()
-	proxy.Tr = &http.Transport{}
+	proxy.Tr, err = setupClientTransport(trustedCertificatePaths)
+	if err != nil {
+		return nil, err
+	}
 	proxy.Verbose = log.GetLevel() == log.DebugLevel
 
 	// Handle HTTP requests with the specified handler.
@@ -98,6 +102,32 @@ func rejectMITMHandler() (goproxy.FuncHttpsHandler, error) {
 		return &goproxy.ConnectAction{
 			Action: goproxy.ConnectReject,
 		}, host
+	}, nil
+}
+
+func setupClientTransport(certificatePaths []string) (*http.Transport, error) {
+	tlsConfig := new(tls.Config)
+
+	// If any certificates are specified, load them. Otherwise, system-wide certificates are to be
+	// used.
+	if len(certificatePaths) > 0 {
+		// TODO: Instead of creating an empty certificate pool, thus overriding entirely the system
+		// pool, we should start from a pool populated by the system roots. This will be possible
+		// in Go 1.7 using x509.SystemCertPool().
+		// See https://go-review.googlesource.com/#/c/21293/
+		tlsConfig.RootCAs = x509.NewCertPool()
+
+		for _, certificatePath := range certificatePaths {
+			if certificate, err := ioutil.ReadFile(certificatePath); err == nil {
+				tlsConfig.RootCAs.AppendCertsFromPEM(certificate)
+			} else {
+				return nil, fmt.Errorf("Could not load certificate '%s': %s", certificatePath, err)
+			}
+		}
+	}
+
+	return &http.Transport{
+		TLSClientConfig: tlsConfig,
 	}, nil
 }
 

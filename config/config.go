@@ -71,10 +71,11 @@ type VerifierProxyConfig struct {
 }
 
 type SignerProxyConfig struct {
-	ListenAddr string       `yaml:"listen_addr"`
-	CAKeyFile  string       `yaml:"ca_key_file"`
-	CACrtFile  string       `yaml:"ca_crt_file"`
-	Signer     SignerConfig `yaml:"signer"`
+	ListenAddr          string       `yaml:"listen_addr"`
+	CAKeyFile           string       `yaml:"ca_key_file"`
+	CACrtFile           string       `yaml:"ca_crt_file"`
+	TrustedCertificated []string     `yaml:"trusted_certificates"`
+	Signer              SignerConfig `yaml:"signer"`
 }
 
 type VerifierConfig struct {
