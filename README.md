@@ -62,6 +62,7 @@ jwtproxy:
   signer_proxy:
     # Addr at which to bind proxy server
     listen_addr: <string|:8080>
+    shutdown_timeout: <time.Duration|1m>
 
     # Optional key and CA certificate to forge MITM SSL certificates
     ca_key_file: <path|nil>
@@ -143,6 +144,7 @@ jwtproxy:
   verifier_proxy:
     # Addr at which to listen for requests
     listen_addr: <string|:8081>
+    shutdown_timeout: <time.Duration|1m>
 
     # Optional PEM private key and certificate files for SSL termination
     key_file: <path|nil>

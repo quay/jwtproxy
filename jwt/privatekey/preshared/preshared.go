@@ -70,6 +70,10 @@ func (preshared *Preshared) GetPrivateKey() (*key.PrivateKey, error) {
 	return preshared.PrivateKey, nil
 }
 
+func (preshared *Preshared) Stop() {
+
+}
+
 func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
 	privateKeyData, err := ioutil.ReadFile(path)
 	if err != nil {

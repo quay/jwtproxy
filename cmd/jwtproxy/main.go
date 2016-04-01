@@ -16,9 +16,9 @@ package main
 
 import (
 	"flag"
-	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	log "github.com/Sirupsen/logrus"
@@ -55,48 +55,61 @@ func main() {
 	log.SetLevel(level)
 
 	// Create JWT proxy handlers.
-	fwp, err := jwt.NewJWTSignerHandler(config.SignerProxy.Signer)
+	signer, err := jwt.NewJWTSignerHandler(config.SignerProxy.Signer)
 	if err != nil {
-		log.Fatalf("Failed to create JWT signer: %s", err)
+		log.Errorf("Failed to create JWT signer: %s", err)
+		return
 	}
-	rvp, err := jwt.NewJWTVerifierHandler(config.VerifierProxy.Verifier)
+	defer signer.Stop()
+
+	verifier, err := jwt.NewJWTVerifierHandler(config.VerifierProxy.Verifier)
 	if err != nil {
-		log.Fatalf("Failed to create JWT verifier: %s", err)
+		log.Errorf("Failed to create JWT verifier: %s", err)
+		return
 	}
+	defer verifier.Stop()
 
 	// Create forward and reverse proxies.
-	forwardProxy, err := proxy.NewProxy(fwp, config.SignerProxy.CAKeyFile, config.SignerProxy.CACrtFile, config.SignerProxy.TrustedCertificated)
+	forwardProxy, err := proxy.NewProxy(signer.Handler, config.SignerProxy.CAKeyFile, config.SignerProxy.CACrtFile, config.SignerProxy.TrustedCertificates)
 	if err != nil {
-		log.Fatalf("Failed to create forward proxy: %s", err)
+		log.Errorf("Failed to create forward proxy: %s", err)
+		return
 	}
 
-	reverseProxy, err := proxy.NewReverseProxy(rvp)
+	reverseProxy, err := proxy.NewReverseProxy(verifier.Handler)
 	if err != nil {
-		log.Fatalf("Failed to create reverse proxy: %s", err)
+		log.Errorf("Failed to create reverse proxy: %s", err)
+		return
 	}
 
 	// Start proxies.
-	go func() {
-		log.Infof("Starting forward proxy (Listening on '%s')", config.SignerProxy.ListenAddr)
-		log.Fatal(http.ListenAndServe(config.SignerProxy.ListenAddr, forwardProxy))
-	}()
+	var proxiesWG sync.WaitGroup
+	startProxy(&proxiesWG, config.SignerProxy.ListenAddr, "", "", "forward", forwardProxy)
+	startProxy(&proxiesWG, config.VerifierProxy.ListenAddr, config.VerifierProxy.CrtFile, config.VerifierProxy.KeyFile, "reverse", reverseProxy)
 
-	go func() {
-		if config.VerifierProxy.CrtFile != "" && config.VerifierProxy.KeyFile != "" {
-			log.Infof("Starting reverse proxy (Listening on '%s', TLS Enabled)", config.VerifierProxy.ListenAddr)
-			log.Fatal(http.ListenAndServeTLS(config.VerifierProxy.ListenAddr, config.VerifierProxy.CrtFile, config.VerifierProxy.KeyFile, reverseProxy))
-		} else {
-			log.Infof("Starting reverse proxy (Listening on '%s', TLS Disabled)", config.VerifierProxy.ListenAddr)
-			go log.Fatal(http.ListenAndServe(config.VerifierProxy.ListenAddr, reverseProxy))
-		}
-	}()
+	// Wait for stop signal.
+	shutdown := make(chan os.Signal)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+	<-shutdown
+	log.Info("Received stop signal. Stopping gracefully...")
 
-	waitForSignals(syscall.SIGINT, syscall.SIGTERM)
-	// TODO: Graceful stop.
+	// Stop proxies gracefully.
+	forwardProxy.Stop(config.SignerProxy.ShutdownTimeout)
+	reverseProxy.Stop(config.VerifierProxy.ShutdownTimeout)
+	proxiesWG.Wait()
+
+	// Now that proxies are stopped, the signer and the verifier can be stopped, along with all their
+	// subsystems. This is done by the defer statements above.
 }
 
-func waitForSignals(signals ...os.Signal) {
-	interrupts := make(chan os.Signal, 1)
-	signal.Notify(interrupts, signals...)
-	<-interrupts
+func startProxy(wg *sync.WaitGroup, listenAddr, crtFile, keyFile string, proxyName string, proxy *proxy.Proxy) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		log.Infof("Starting %s proxy (Listening on '%s')", proxyName, listenAddr)
+		if err := proxy.Serve(listenAddr, crtFile, keyFile); err != nil {
+			log.Errorf("Failed to start %s proxy: %s", proxyName, err)
+		}
+	}()
 }

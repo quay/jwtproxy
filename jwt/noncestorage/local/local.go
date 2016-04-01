@@ -59,3 +59,7 @@ func (ln *Local) Verify(nonce string, expiration time.Time) bool {
 	ln.Set(nonce, struct{}{}, expiration.Sub(time.Now()))
 	return true
 }
+
+func (ln *Local) Stop() {
+
+}

@@ -33,6 +33,7 @@ type ManagerConstructor func(config.RegistrableComponentConfig, config.SignerPar
 
 type Reader interface {
 	GetPublicKey(issuer string, keyID string) (*key.PublicKey, error)
+	Stop()
 }
 
 type KeyPolicy struct {
@@ -43,6 +44,7 @@ type KeyPolicy struct {
 type Manager interface {
 	PublishPublicKey(key *key.PublicKey, policy *KeyPolicy, signingKey *key.PrivateKey) *PublishResult
 	DeletePublicKey(keyID string, signingKey *key.PrivateKey) error
+	Stop()
 }
 
 var readers = make(map[string]ReaderConstructor)
