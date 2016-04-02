@@ -68,6 +68,7 @@ func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout t
 
 func (proxy *Proxy) Stop() {
 	proxy.grace.Stop(proxy.shutdownTimeout)
+	<-proxy.grace.StopChan()
 }
 
 func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertificatePaths []string) (*Proxy, error) {
