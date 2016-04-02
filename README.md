@@ -60,6 +60,8 @@ Configures and enables the JWT forward signing proxy.
 ```yaml
 jwtproxy:
   signer_proxy:
+    enabled: <bool|true>
+
     # Addr at which to bind proxy server
     listen_addr: <string|:8080>
     shutdown_timeout: <time.Duration|1m>
@@ -142,6 +144,8 @@ Configures and enables the JWT verifying reverse proxy.
 ```yaml
 jwtproxy:
   verifier_proxy:
+    enabled: <bool|true>
+
     # Addr at which to listen for requests
     listen_addr: <string|:8081>
     shutdown_timeout: <time.Duration|1m>

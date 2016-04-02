@@ -18,8 +18,8 @@ import (
 	"flag"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -54,62 +54,87 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	// Create JWT proxy handlers.
-	signer, err := jwt.NewJWTSignerHandler(config.SignerProxy.Signer)
-	if err != nil {
-		log.Errorf("Failed to create JWT signer: %s", err)
-		return
-	}
-	defer signer.Stop()
-
-	verifier, err := jwt.NewJWTVerifierHandler(config.VerifierProxy.Verifier)
-	if err != nil {
-		log.Errorf("Failed to create JWT verifier: %s", err)
-		return
-	}
-	defer verifier.Stop()
-
-	// Create forward and reverse proxies.
-	forwardProxy, err := proxy.NewProxy(signer.Handler, config.SignerProxy.CAKeyFile, config.SignerProxy.CACrtFile, config.SignerProxy.TrustedCertificates)
-	if err != nil {
-		log.Errorf("Failed to create forward proxy: %s", err)
+	// Nothing to run? Abort.
+	if !config.VerifierProxy.Enabled && !config.SignerProxy.Enabled {
+		log.Warning("No proxy is enabled. Terminating.")
 		return
 	}
 
-	reverseProxy, err := proxy.NewReverseProxy(verifier.Handler)
-	if err != nil {
-		log.Errorf("Failed to create reverse proxy: %s", err)
-		return
-	}
-
-	// Start proxies.
-	var proxiesWG sync.WaitGroup
-	startProxy(&proxiesWG, config.SignerProxy.ListenAddr, "", "", "forward", forwardProxy)
-	startProxy(&proxiesWG, config.VerifierProxy.ListenAddr, config.VerifierProxy.CrtFile, config.VerifierProxy.KeyFile, "reverse", reverseProxy)
-
-	// Wait for stop signal.
+	// Create shutdown channel and make it listen to SIGINT and SIGTERM.
 	shutdown := make(chan os.Signal)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+
+	if config.SignerProxy.Enabled {
+		// Create signer.
+		signer, err := jwt.NewJWTSignerHandler(config.SignerProxy.Signer)
+		if err != nil {
+			log.Errorf("Failed to create JWT signer: %s", err)
+			return
+		}
+		defer signer.Stop()
+
+		// Create forward proxy.
+		forwardProxy, err := proxy.NewProxy(signer.Handler, config.SignerProxy.CAKeyFile, config.SignerProxy.CACrtFile, config.SignerProxy.TrustedCertificates)
+		if err != nil {
+			log.Errorf("Failed to create forward proxy: %s", err)
+			return
+		}
+
+		startProxy(
+			shutdown,
+			config.SignerProxy.ListenAddr,
+			"",
+			"",
+			config.SignerProxy.ShutdownTimeout,
+			"forward",
+			forwardProxy,
+		)
+		defer forwardProxy.Stop()
+	}
+
+	if config.VerifierProxy.Enabled {
+		// Create verifier.
+		verifier, err := jwt.NewJWTVerifierHandler(config.VerifierProxy.Verifier)
+		if err != nil {
+			log.Errorf("Failed to create JWT verifier: %s", err)
+			return
+		}
+		defer verifier.Stop()
+
+		// Create reverse proxy.
+		reverseProxy, err := proxy.NewReverseProxy(verifier.Handler)
+		if err != nil {
+			log.Errorf("Failed to create reverse proxy: %s", err)
+			return
+		}
+
+		startProxy(
+			shutdown,
+			config.VerifierProxy.ListenAddr,
+			config.VerifierProxy.CrtFile,
+			config.VerifierProxy.KeyFile,
+			config.VerifierProxy.ShutdownTimeout,
+			"reverse",
+			reverseProxy,
+		)
+		defer reverseProxy.Stop()
+	}
+
+	// Wait for stop signal.
 	<-shutdown
 	log.Info("Received stop signal. Stopping gracefully...")
 
-	// Stop proxies gracefully.
-	forwardProxy.Stop(config.SignerProxy.ShutdownTimeout)
-	reverseProxy.Stop(config.VerifierProxy.ShutdownTimeout)
-	proxiesWG.Wait()
-
-	// Now that proxies are stopped, the signer and the verifier can be stopped, along with all their
-	// subsystems. This is done by the defer statements above.
+	// The order of `Defer` statements guarantees that:
+	// - the forward proxy will shutdown before the signer handler (and its subsystems).
+	// - the reverse proxy will shutdown before the verifier handler (and its subsystems).
 }
 
-func startProxy(wg *sync.WaitGroup, listenAddr, crtFile, keyFile string, proxyName string, proxy *proxy.Proxy) {
-	wg.Add(1)
+func startProxy(shutdown chan os.Signal, listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration, proxyName string, proxy *proxy.Proxy) {
 	go func() {
-		defer wg.Done()
-
 		log.Infof("Starting %s proxy (Listening on '%s')", proxyName, listenAddr)
-		if err := proxy.Serve(listenAddr, crtFile, keyFile); err != nil {
+		if err := proxy.Serve(listenAddr, crtFile, keyFile, shutdownTimeout); err != nil {
 			log.Errorf("Failed to start %s proxy: %s", proxyName, err)
+			close(shutdown)
 		}
 	}()
 }

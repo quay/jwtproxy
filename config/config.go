@@ -64,6 +64,7 @@ type Config struct {
 }
 
 type VerifierProxyConfig struct {
+	Enabled         bool           `yaml:"enabled"`
 	ListenAddr      string         `yaml:"listen_addr"`
 	ShutdownTimeout time.Duration  `yaml:"shutdown_timeout"`
 	CrtFile         string         `yaml:"crt_file"`
@@ -72,6 +73,7 @@ type VerifierProxyConfig struct {
 }
 
 type SignerProxyConfig struct {
+	Enabled             bool          `yaml:"enabled"`
 	ListenAddr          string        `yaml:"listen_addr"`
 	ShutdownTimeout     time.Duration `yaml:"shutdown_timeout"`
 	CAKeyFile           string        `yaml:"ca_key_file"`
@@ -110,6 +112,7 @@ type RegistrableComponentConfig struct {
 func DefaultConfig() Config {
 	return Config{
 		SignerProxy: SignerProxyConfig{
+			Enabled:         true,
 			ListenAddr:      ":8080",
 			ShutdownTimeout: 1 * time.Minute,
 			Signer: SignerConfig{
@@ -122,6 +125,7 @@ func DefaultConfig() Config {
 			},
 		},
 		VerifierProxy: VerifierProxyConfig{
+			Enabled:         true,
 			ListenAddr:      ":8081",
 			ShutdownTimeout: 1 * time.Minute,
 			Verifier: VerifierConfig{
