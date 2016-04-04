@@ -29,13 +29,17 @@ func init() {
 
 type Client struct {
 	cache        *cache.Cache
-	Registry     *url.URL
-	SignerParams config.SignerParams
+	registry     *url.URL
+	signerParams config.SignerParams
 }
 
 type Config struct {
-	Registry config.URL   `yaml:"registry"`
-	Cache    *CacheConfig `yaml:"cache"`
+	Registry config.URL `yaml:"registry"`
+}
+
+type ManagerConfig struct {
+	Config `yaml:",inline"'`
+	Cache  *CacheConfig `yaml:"cache"`
 }
 
 type CacheConfig struct {
@@ -97,7 +101,7 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 		}
 
 		// Create an HTTP request to the key server to publish a new key.
-		publishURL := krc.absURL("services", krc.SignerParams.Issuer, "keys", key.ID())
+		publishURL := krc.absURL("services", krc.signerParams.Issuer, "keys", key.ID())
 
 		queryParams := publishURL.Query()
 		if policy.Expiration != nil {
@@ -131,7 +135,7 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 			// approval. Loop until it becomes approved or the whole process
 			// gets canceled.
 			monPublishLog.Debug("Monitoring publish status")
-			monURL := krc.absURL("services", krc.SignerParams.Issuer, "keys", key.ID())
+			monURL := krc.absURL("services", krc.signerParams.Issuer, "keys", key.ID())
 
 			pollPeriod := time.NewTicker(1 * time.Second)
 			defer pollPeriod.Stop()
@@ -183,7 +187,7 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 }
 
 func (krc *Client) DeletePublicKey(keyID string, signingKey *key.PrivateKey) error {
-	url := krc.absURL("services", krc.SignerParams.Issuer, "keys", keyID)
+	url := krc.absURL("services", krc.signerParams.Issuer, "keys", keyID)
 
 	resp, err := krc.signAndDo("DELETE", url, nil, signingKey)
 	if err != nil {
@@ -213,7 +217,7 @@ func (krc *Client) signAndDo(method string, url *url.URL, body io.Reader, signin
 	}
 
 	// Sign it with the specified private key and config.
-	err = jwt.Sign(req, signingKey, krc.SignerParams)
+	err = jwt.Sign(req, signingKey, krc.signerParams)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +228,7 @@ func (krc *Client) signAndDo(method string, url *url.URL, body io.Reader, signin
 
 func (krc *Client) absURL(pathParams ...string) *url.URL {
 	escaped := make([]string, 0, len(pathParams)+1)
-	escaped = append(escaped, krc.Registry.Path)
+	escaped = append(escaped, krc.registry.Path)
 	for _, pathParam := range pathParams {
 		escaped = append(escaped, url.QueryEscape(pathParam))
 	}
@@ -234,15 +238,31 @@ func (krc *Client) absURL(pathParams ...string) *url.URL {
 	if err != nil {
 		panic(err)
 	}
-	return krc.Registry.ResolveReference(relurl)
+	return krc.registry.ResolveReference(relurl)
 }
 
-func constructor(registrableComponentConfig config.RegistrableComponentConfig) (*Client, error) {
-	var cfg Config
+func constructReader(registrableComponentConfig config.RegistrableComponentConfig) (keyserver.Reader, error) {
 	bytes, err := yaml.Marshal(registrableComponentConfig.Options)
 	if err != nil {
 		return nil, err
 	}
+	var cfg Config
+	err = yaml.Unmarshal(bytes, &cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		registry: cfg.Registry.URL,
+	}, nil
+}
+
+func constructManager(registrableComponentConfig config.RegistrableComponentConfig, signerParams config.SignerParams) (keyserver.Manager, error) {
+	bytes, err := yaml.Marshal(registrableComponentConfig.Options)
+	if err != nil {
+		return nil, err
+	}
+	var cfg ManagerConfig
 	err = yaml.Unmarshal(bytes, &cfg)
 	if err != nil {
 		return nil, err
@@ -263,17 +283,8 @@ func constructor(registrableComponentConfig config.RegistrableComponentConfig) (
 	}
 
 	return &Client{
-		Registry: cfg.Registry.URL,
-		cache:    c,
+		registry:     cfg.Registry.URL,
+		cache:        c,
+		signerParams: signerParams,
 	}, nil
-}
-
-func constructReader(registrableComponentConfig config.RegistrableComponentConfig) (keyserver.Reader, error) {
-	return constructor(registrableComponentConfig)
-}
-
-func constructManager(registrableComponentConfig config.RegistrableComponentConfig, signerParams config.SignerParams) (keyserver.Manager, error) {
-	manager, err := constructor(registrableComponentConfig)
-	manager.SignerParams = signerParams
-	return manager, err
 }
