@@ -1,14 +1,64 @@
 {
 	"ImportPath": "github.com/coreos-inc/jwtproxy",
-	"GoVersion": "go1.5",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v60",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.9.0-15-g219c8cb",
-			"Rev": "219c8cb75c258c552e999735be6df753ffc7afdc"
+			"Comment": "v0.10.0",
+			"Rev": "4b6ea7319e214d98c938f12692336f7ca9348d6b"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/http",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/jose",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/key",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/oauth2",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-oidc/oidc",
+			"Rev": "f427f54ef96beaa1db5fabbe4fff00de535d5494"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-systemd/journal",
+			"Comment": "v5",
+			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/capnslog",
+			"Rev": "1914e367e85eaf0c25d495b48e060dfe6190f8d0"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/health",
+			"Rev": "1914e367e85eaf0c25d495b48e060dfe6190f8d0"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/httputil",
+			"Rev": "1914e367e85eaf0c25d495b48e060dfe6190f8d0"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/timeutil",
+			"Rev": "1914e367e85eaf0c25d495b48e060dfe6190f8d0"
+		},
+		{
+			"ImportPath": "github.com/jonboulle/clockwork",
+			"Rev": "ed104f61ea4877bea08af6f759805674861e968d"
+		},
+		{
+			"ImportPath": "github.com/patrickmn/go-cache",
+			"Rev": "1881a9bccb818787f68c52bfba648c6cf34c34fa"
 		},
 		{
 			"ImportPath": "github.com/quentin-m/goproxy",
@@ -16,8 +66,17 @@
 			"Rev": "68c684f60e7acc501496bf6c9752c286eb8044c7"
 		},
 		{
+			"ImportPath": "github.com/tylerb/graceful",
+			"Comment": "v1.2.5",
+			"Rev": "9a3d4236b03bb5d26f7951134d248f9d5510d599"
+		},
+		{
+			"ImportPath": "golang.org/x/net/netutil",
+			"Rev": "024ed629fd292398cfd43c9678a5bf004f7defdc"
+		},
+		{
 			"ImportPath": "golang.org/x/sys/unix",
-			"Rev": "9d4e42a20653790449273b3c85e67d6d8bae6e2e"
+			"Rev": "a60af9cbbc6ab800af4f2be864a31f423a0ae1f2"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
