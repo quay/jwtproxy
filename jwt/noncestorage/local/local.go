@@ -21,7 +21,7 @@ import (
 
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
-	"github.com/patrickmn/go-cache"
+	"github.com/pmylund/go-cache"
 )
 
 func init() {
