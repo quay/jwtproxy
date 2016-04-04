@@ -14,7 +14,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/key"
-	"github.com/pmylund/go-cache"
+	"github.com/patrickmn/go-cache"
 	"gopkg.in/yaml.v2"
 
 	"github.com/coreos-inc/jwtproxy/config"
