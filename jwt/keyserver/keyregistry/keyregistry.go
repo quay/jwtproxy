@@ -57,10 +57,16 @@ func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 	}
 
 	// Query key registry for a public key matching the given issuer and key ID.
-	resp, err := http.Get(krc.absURL("services", issuer, "keys", keyID).String())
+	pubkeyURL := krc.absURL("services", issuer, "keys", keyID)
+	pubkeyReq, err := krc.prepareRequest("GET", pubkeyURL, nil)
 	if err != nil {
 		return nil, err
 	}
+	resp, err := http.DefaultClient.Do(pubkeyReq)
+	if err != nil {
+		return nil, err
+	}
+
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, keyserver.ErrPublicKeyNotFound
 	} else if resp.StatusCode != http.StatusOK {
@@ -143,7 +149,13 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 			for {
 				select {
 				case <-pollPeriod.C:
-					checkPublished, err := krc.signAndDo("GET", monURL, nil, signingKey)
+					checkReq, err := krc.prepareRequest("GET", monURL, nil)
+					if err != nil {
+						publishResult.SetError(err)
+						return
+					}
+
+					checkPublished, err := http.DefaultClient.Do(checkReq)
 					if err != nil {
 						publishResult.SetError(err)
 						return
@@ -207,13 +219,9 @@ func (krc *Client) Stop() {
 
 func (krc *Client) signAndDo(method string, url *url.URL, body io.Reader, signingKey *key.PrivateKey) (*http.Response, error) {
 	// Create an HTTP request to the key server to publish a new key.
-	req, err := http.NewRequest(method, url.String(), body)
+	req, err := krc.prepareRequest(method, url, body)
 	if err != nil {
 		return nil, err
-	}
-
-	if method == "PUT" || method == "POST" {
-		req.Header.Add("Content-Type", "application/json")
 	}
 
 	// Sign it with the specified private key and config.
@@ -224,6 +232,23 @@ func (krc *Client) signAndDo(method string, url *url.URL, body io.Reader, signin
 
 	// Execute the request, if it returns a 200, close the channel immediately.
 	return http.DefaultClient.Do(req)
+}
+
+func (krc *Client) prepareRequest(method string, url *url.URL, body io.Reader) (*http.Request, error) {
+	// Create an HTTP request to the key server to publish a new key.
+	req, err := http.NewRequest(method, url.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	if method == "PUT" || method == "POST" {
+		req.Header.Add("Content-Type", "application/json")
+	}
+
+	// Add our user agent.
+	req.Header.Set("User-Agent", "KeyRegistryClient/0.1.0")
+
+	return req, nil
 }
 
 func (krc *Client) absURL(pathParams ...string) *url.URL {
