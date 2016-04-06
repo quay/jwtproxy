@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -31,6 +32,8 @@ type Client struct {
 	cache        *cache.Cache
 	registry     *url.URL
 	signerParams config.SignerParams
+	stopping     chan struct{}
+	inFlight     *sync.WaitGroup
 }
 
 type Config struct {
@@ -97,8 +100,10 @@ func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPolicy, signingKey *key.PrivateKey) *keyserver.PublishResult {
 	// Create a channel that will track the response status.
 	publishResult := keyserver.NewPublishResult()
+	krc.inFlight.Add(1)
 
 	go func() {
+		defer krc.inFlight.Done()
 		// Serialize the jwk as the body.
 		body, err := json.Marshal(key)
 		if err != nil {
@@ -180,7 +185,11 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 					monPublishLog.Debug("Canceling key publication monitor goroutine")
 					canceledErr := fmt.Errorf("Key publication monitor canceled")
 					publishResult.SetError(canceledErr)
-					pollPeriod.Stop()
+					return
+				case <-krc.stopping:
+					monPublishLog.Debug("Candeling key publication due to shutdown")
+					shutdownErr := fmt.Errorf("Shutting down")
+					publishResult.SetError(shutdownErr)
 					return
 				}
 			}
@@ -213,8 +222,14 @@ func (krc *Client) DeletePublicKey(keyID string, signingKey *key.PrivateKey) err
 	return nil
 }
 
-func (krc *Client) Stop() {
-
+func (krc *Client) Stop() <-chan struct{} {
+	finished := make(chan struct{})
+	close(krc.stopping)
+	go func() {
+		krc.inFlight.Wait()
+		close(finished)
+	}()
+	return finished
 }
 
 func (krc *Client) signAndDo(method string, url *url.URL, body io.Reader, signingKey *key.PrivateKey) (*http.Response, error) {
@@ -279,6 +294,8 @@ func constructReader(registrableComponentConfig config.RegistrableComponentConfi
 
 	return &Client{
 		registry: cfg.Registry.URL,
+		inFlight: &sync.WaitGroup{},
+		stopping: make(chan struct{}),
 	}, nil
 }
 
@@ -311,5 +328,7 @@ func constructManager(registrableComponentConfig config.RegistrableComponentConf
 		registry:     cfg.Registry.URL,
 		cache:        c,
 		signerParams: signerParams,
+		inFlight:     &sync.WaitGroup{},
+		stopping:     make(chan struct{}),
 	}, nil
 }

@@ -29,6 +29,7 @@ import (
 
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
+	"github.com/coreos-inc/jwtproxy/stop"
 )
 
 func init() {
@@ -82,8 +83,8 @@ func (preshared *Preshared) GetPublicKey(issuer string, keyID string) (*key.Publ
 	return preshared.PublicKey, nil
 }
 
-func (preshared *Preshared) Stop() {
-
+func (preshared *Preshared) Stop() <-chan struct{} {
+	return stop.AlreadyDone
 }
 
 func loadPublicKey(path string) (*rsa.PublicKey, error) {

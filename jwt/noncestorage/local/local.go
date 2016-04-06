@@ -21,6 +21,7 @@ import (
 
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
+	"github.com/coreos-inc/jwtproxy/stop"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -60,6 +61,6 @@ func (ln *Local) Verify(nonce string, expiration time.Time) bool {
 	return true
 }
 
-func (ln *Local) Stop() {
-
+func (ln *Local) Stop() <-chan struct{} {
+	return stop.AlreadyDone
 }

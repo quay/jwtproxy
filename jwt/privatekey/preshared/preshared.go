@@ -27,6 +27,7 @@ import (
 
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt/privatekey"
+	"github.com/coreos-inc/jwtproxy/stop"
 )
 
 func init() {
@@ -70,8 +71,8 @@ func (preshared *Preshared) GetPrivateKey() (*key.PrivateKey, error) {
 	return preshared.PrivateKey, nil
 }
 
-func (preshared *Preshared) Stop() {
-
+func (preshared *Preshared) Stop() <-chan struct{} {
+	return stop.AlreadyDone
 }
 
 func loadPrivateKey(path string) (*rsa.PrivateKey, error) {

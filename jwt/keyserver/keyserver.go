@@ -22,6 +22,7 @@ import (
 	"github.com/coreos/go-oidc/key"
 
 	"github.com/coreos-inc/jwtproxy/config"
+	"github.com/coreos-inc/jwtproxy/stop"
 )
 
 var (
@@ -32,8 +33,8 @@ type ReaderConstructor func(config.RegistrableComponentConfig) (Reader, error)
 type ManagerConstructor func(config.RegistrableComponentConfig, config.SignerParams) (Manager, error)
 
 type Reader interface {
+	stop.Stoppable
 	GetPublicKey(issuer string, keyID string) (*key.PublicKey, error)
-	Stop()
 }
 
 type KeyPolicy struct {
@@ -42,9 +43,9 @@ type KeyPolicy struct {
 }
 
 type Manager interface {
+	stop.Stoppable
 	PublishPublicKey(key *key.PublicKey, policy *KeyPolicy, signingKey *key.PrivateKey) *PublishResult
 	DeletePublicKey(keyID string, signingKey *key.PrivateKey) error
-	Stop()
 }
 
 var readers = make(map[string]ReaderConstructor)

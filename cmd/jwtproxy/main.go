@@ -16,6 +16,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,6 +27,7 @@ import (
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt"
 	"github.com/coreos-inc/jwtproxy/proxy"
+	"github.com/coreos-inc/jwtproxy/stop"
 
 	_ "github.com/coreos-inc/jwtproxy/jwt/keyserver/keyregistry"
 	_ "github.com/coreos-inc/jwtproxy/jwt/keyserver/preshared"
@@ -64,77 +66,116 @@ func main() {
 	shutdown := make(chan os.Signal)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
+	stopper := stop.NewGroup()
+
+	abort := make(chan error)
 	if config.SignerProxy.Enabled {
-		// Create signer.
-		signer, err := jwt.NewJWTSignerHandler(config.SignerProxy.Signer)
-		if err != nil {
-			log.Errorf("Failed to create JWT signer: %s", err)
-			return
-		}
-		defer signer.Stop()
-
-		// Create forward proxy.
-		forwardProxy, err := proxy.NewProxy(signer.Handler, config.SignerProxy.CAKeyFile, config.SignerProxy.CACrtFile, config.SignerProxy.TrustedCertificates)
-		if err != nil {
-			log.Errorf("Failed to create forward proxy: %s", err)
-			return
-		}
-
-		startProxy(
-			shutdown,
-			config.SignerProxy.ListenAddr,
-			"",
-			"",
-			config.SignerProxy.ShutdownTimeout,
-			"forward",
-			forwardProxy,
-		)
-		defer forwardProxy.Stop()
+		go startForwardProxy(config.SignerProxy, stopper, abort)
 	}
 
 	if config.VerifierProxy.Enabled {
-		// Create verifier.
-		verifier, err := jwt.NewJWTVerifierHandler(config.VerifierProxy.Verifier)
-		if err != nil {
-			log.Errorf("Failed to create JWT verifier: %s", err)
-			return
-		}
-		defer verifier.Stop()
-
-		// Create reverse proxy.
-		reverseProxy, err := proxy.NewReverseProxy(verifier.Handler)
-		if err != nil {
-			log.Errorf("Failed to create reverse proxy: %s", err)
-			return
-		}
-
-		startProxy(
-			shutdown,
-			config.VerifierProxy.ListenAddr,
-			config.VerifierProxy.CrtFile,
-			config.VerifierProxy.KeyFile,
-			config.VerifierProxy.ShutdownTimeout,
-			"reverse",
-			reverseProxy,
-		)
-		defer reverseProxy.Stop()
+		go startReverseProxy(config.VerifierProxy, stopper, abort)
 	}
 
 	// Wait for stop signal.
-	<-shutdown
-	log.Info("Received stop signal. Stopping gracefully...")
+	select {
+	case <-shutdown:
+		log.Info("Received stop signal. Stopping gracefully...")
+	case aborted := <-abort:
+		log.Error(aborted)
+	}
 
-	// The order of `Defer` statements guarantees that:
-	// - the forward proxy will shutdown before the signer handler (and its subsystems).
-	// - the reverse proxy will shutdown before the verifier handler (and its subsystems).
+	stopped := stopper.Stop()
+
+	// Restore the original behavior in case we need to force shutdown.
+	signal.Reset(syscall.SIGINT, syscall.SIGTERM)
+
+	// Wait for everything to stop.
+	<-stopped
 }
 
-func startProxy(shutdown chan os.Signal, listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration, proxyName string, proxy *proxy.Proxy) {
+func startForwardProxy(fpConfig config.SignerProxyConfig, stopper *stop.Group, abort chan<- error) {
+	// Create signer.
+	signer, err := jwt.NewJWTSignerHandler(fpConfig.Signer)
+	if err != nil {
+		abort <- fmt.Errorf("Failed to create JWT signer: %s", err)
+		return
+	}
+
+	// Create forward proxy.
+	forwardProxy, err := proxy.NewProxy(signer.Handler, fpConfig.CAKeyFile, fpConfig.CACrtFile, fpConfig.TrustedCertificates)
+	if err != nil {
+		stopper.Add(signer)
+		abort <- fmt.Errorf("Failed to create forward proxy: %s", err)
+		return
+	}
+
+	startProxy(
+		abort,
+		fpConfig.ListenAddr,
+		"",
+		"",
+		fpConfig.ShutdownTimeout,
+		"forward",
+		forwardProxy,
+	)
+
+	forwardStopper := func() <-chan struct{} {
+		done := make(chan struct{})
+		go func() {
+			<-forwardProxy.Stop()
+			<-signer.Stop()
+			close(done)
+		}()
+		return done
+	}
+	stopper.AddFunc(forwardStopper)
+}
+
+func startReverseProxy(rpConfig config.VerifierProxyConfig, stopper *stop.Group, abort chan<- error) {
+	// Create verifier.
+	verifier, err := jwt.NewJWTVerifierHandler(rpConfig.Verifier)
+	if err != nil {
+		abort <- fmt.Errorf("Failed to create JWT verifier: %s", err)
+		return
+	}
+
+	// Create reverse proxy.
+	reverseProxy, err := proxy.NewReverseProxy(verifier.Handler)
+	if err != nil {
+		stopper.Add(verifier)
+		abort <- fmt.Errorf("Failed to create reverse proxy: %s", err)
+		return
+	}
+
+	startProxy(
+		abort,
+		rpConfig.ListenAddr,
+		rpConfig.CrtFile,
+		rpConfig.KeyFile,
+		rpConfig.ShutdownTimeout,
+		"reverse",
+		reverseProxy,
+	)
+
+	reverseStopper := func() <-chan struct{} {
+		done := make(chan struct{})
+		go func() {
+			<-reverseProxy.Stop()
+			<-verifier.Stop()
+			close(done)
+		}()
+		return done
+	}
+	stopper.AddFunc(reverseStopper)
+}
+
+func startProxy(abort chan<- error, listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration, proxyName string, proxy *proxy.Proxy) {
 	go func() {
 		log.Infof("Starting %s proxy (Listening on '%s')", proxyName, listenAddr)
 		if err := proxy.Serve(listenAddr, crtFile, keyFile, shutdownTimeout); err != nil {
-			log.Errorf("Failed to start %s proxy: %s", proxyName, err)
-			close(shutdown)
+			failedToStart := fmt.Errorf("Failed to start %s proxy: %s", proxyName, err)
+			abort <- failedToStart
 		}
 	}()
 }

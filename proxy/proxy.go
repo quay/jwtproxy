@@ -25,6 +25,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/coreos-inc/jwtproxy/stop"
 	"github.com/quentin-m/goproxy"
 	"github.com/tylerb/graceful"
 )
@@ -37,6 +38,7 @@ type Proxy struct {
 	*goproxy.ProxyHttpServer
 	grace           *graceful.Server
 	shutdownTimeout time.Duration
+	started         bool
 }
 
 func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration) error {
@@ -63,12 +65,17 @@ func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout t
 		}
 	}
 
+	proxy.started = true
+
 	return nil
 }
 
-func (proxy *Proxy) Stop() {
-	proxy.grace.Stop(proxy.shutdownTimeout)
-	<-proxy.grace.StopChan()
+func (proxy *Proxy) Stop() <-chan struct{} {
+	if proxy.started {
+		proxy.grace.Stop(proxy.shutdownTimeout)
+		return proxy.grace.StopChan()
+	}
+	return stop.AlreadyDone
 }
 
 func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertificatePaths []string) (*Proxy, error) {
