@@ -28,11 +28,12 @@ import (
 	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
 	"github.com/coreos-inc/jwtproxy/jwt/privatekey"
 	"github.com/coreos-inc/jwtproxy/proxy"
+	"github.com/coreos-inc/jwtproxy/stop"
 )
 
 type StoppableProxyHandler struct {
 	proxy.Handler
-	Stop func()
+	stopFunc func() <-chan struct{}
 }
 
 func NewJWTSignerHandler(cfg config.SignerConfig) (*StoppableProxyHandler, error) {
@@ -60,13 +61,9 @@ func NewJWTSignerHandler(cfg config.SignerConfig) (*StoppableProxyHandler, error
 		return r, nil
 	}
 
-	stopper := func() {
-		privateKeyProvider.Stop()
-	}
-
 	return &StoppableProxyHandler{
-		Handler: handler,
-		Stop:    stopper,
+		Handler:  handler,
+		stopFunc: privateKeyProvider.Stop,
 	}, nil
 }
 
@@ -110,15 +107,18 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (*StoppableProxyHandler, e
 		return r, nil
 	}
 
-	stopper := func() {
-		keyServer.Stop()
-		nonceStorage.Stop()
-	}
+	stopper := stop.NewGroup()
+	stopper.Add(keyServer)
+	stopper.Add(nonceStorage)
 
 	return &StoppableProxyHandler{
-		Handler: handler,
-		Stop:    stopper,
+		Handler:  handler,
+		stopFunc: stopper.Stop,
 	}, nil
+}
+
+func (sph *StoppableProxyHandler) Stop() <-chan struct{} {
+	return sph.stopFunc()
 }
 
 func errorResponse(r *http.Request, err error) *http.Response {

@@ -19,13 +19,14 @@ import (
 	"time"
 
 	"github.com/coreos-inc/jwtproxy/config"
+	"github.com/coreos-inc/jwtproxy/stop"
 )
 
 type Constructor func(config.RegistrableComponentConfig) (NonceStorage, error)
 
 type NonceStorage interface {
+	stop.Stoppable
 	Verify(nonce string, expiration time.Time) bool
-	Stop()
 }
 
 var storages = make(map[string]Constructor)

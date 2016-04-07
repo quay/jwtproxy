@@ -17,13 +17,15 @@ package privatekey
 import (
 	"fmt"
 
-	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos/go-oidc/key"
+
+	"github.com/coreos-inc/jwtproxy/config"
+	"github.com/coreos-inc/jwtproxy/stop"
 )
 
 type PrivateKey interface {
+	stop.Stoppable
 	GetPrivateKey() (*key.PrivateKey, error)
-	Stop()
 }
 
 type Constructor func(config.RegistrableComponentConfig, config.SignerParams) (PrivateKey, error)
