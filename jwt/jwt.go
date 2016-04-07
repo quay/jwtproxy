@@ -69,22 +69,22 @@ func Sign(req *http.Request, key *key.PrivateKey, params config.SignerParams) er
 	return nil
 }
 
-func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncestorage.NonceStorage, audience *url.URL, maxSkew time.Duration, maxTTL time.Duration) error {
+func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncestorage.NonceStorage, audience *url.URL, maxSkew time.Duration, maxTTL time.Duration) (jose.Claims, error) {
 	// Extract token from request.
 	token, err := oidc.ExtractBearerToken(req)
 	if err != nil {
-		return errors.New("No JWT found")
+		return nil, errors.New("No JWT found")
 	}
 
 	// Parse token.
 	jwt, err := jose.ParseJWT(token)
 	if err != nil {
-		return errors.New("Could not parse JWT")
+		return nil, errors.New("Could not parse JWT")
 	}
 
 	claims, err := jwt.Claims()
 	if err != nil {
-		return errors.New("Could not parse JWT claims")
+		return nil, errors.New("Could not parse JWT claims")
 	}
 
 	// Verify claims.
@@ -92,56 +92,56 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 
 	kid, exists, err := claims.StringClaim("kid")
 	if !exists || err != nil {
-		return errors.New("Missing or invalid 'kid' claim")
+		return nil, errors.New("Missing or invalid 'kid' claim")
 	}
 	iss, exists, err := claims.StringClaim("iss")
 	if !exists || err != nil {
-		return errors.New("Missing or invalid 'iss' claim")
+		return nil, errors.New("Missing or invalid 'iss' claim")
 	}
 	aud, exists, err := claims.StringClaim("aud")
 	if !exists || err != nil || !verifyAudience(aud, audience) {
-		return errors.New("Missing or invalid 'aud' claim")
+		return nil, errors.New("Missing or invalid 'aud' claim")
 	}
 	exp, exists, err := claims.TimeClaim("exp")
 	if !exists || err != nil || exp.Before(now) {
-		return errors.New("Missing or invalid 'exp' claim")
+		return nil, errors.New("Missing or invalid 'exp' claim")
 	}
 	nbf, exists, err := claims.TimeClaim("nbf")
 	if !exists || err != nil || nbf.After(now) {
-		return errors.New("Missing or invalid 'nbf' claim")
+		return nil, errors.New("Missing or invalid 'nbf' claim")
 	}
 	iat, exists, err := claims.TimeClaim("iat")
 	if !exists || err != nil || iat.Add(-maxSkew).After(now) {
-		return errors.New("Missing or invalid 'iat' claim")
+		return nil, errors.New("Missing or invalid 'iat' claim")
 	}
 	if exp.Sub(iat) > maxTTL {
-		return errors.New("Invalid 'exp' claim (too long)")
+		return nil, errors.New("Invalid 'exp' claim (too long)")
 	}
 	jti, exists, err := claims.StringClaim("jti")
 	if !exists || err != nil || !nonceVerifier.Verify(jti, exp) {
-		return errors.New("Missing or invalid 'jti' claim")
+		return nil, errors.New("Missing or invalid 'jti' claim")
 	}
 
 	// Verify signature.
 	publicKey, err := keyServer.GetPublicKey(iss, kid)
 	if err == keyserver.ErrPublicKeyNotFound {
-		return err
+		return nil, err
 	} else if err != nil {
 		log.Errorf("Could not get public key from key server: %s", err)
-		return errors.New("Unexpected key server error")
+		return nil, errors.New("Unexpected key server error")
 	}
 
 	verifier, err := publicKey.Verifier()
 	if err != nil {
 		log.Errorf("Could not create JWT verifier for public key '%s': %s", publicKey.ID(), err)
-		return errors.New("Unexpected verifier initialization failure")
+		return nil, errors.New("Unexpected verifier initialization failure")
 	}
 
 	if verifier.Verify(jwt.Signature, []byte(jwt.Data())) != nil {
-		return errors.New("Invalid JWT signature")
+		return nil, errors.New("Invalid JWT signature")
 	}
 
-	return nil
+	return claims, nil
 }
 
 func verifyAudience(actual string, expected *url.URL) bool {
