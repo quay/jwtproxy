@@ -21,9 +21,11 @@ import (
 	"net/url"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/quentin-m/goproxy"
 
 	"github.com/coreos-inc/jwtproxy/config"
+	"github.com/coreos-inc/jwtproxy/jwt/claims"
 	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
 	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
 	"github.com/coreos-inc/jwtproxy/jwt/privatekey"
@@ -85,20 +87,51 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (*StoppableProxyHandler, e
 		return nil, err
 	}
 
+	stopper := stop.NewGroup()
+	stopper.Add(keyServer)
+
 	// Create a NonceStorage that will create nonces for signing.
 	nonceStorage, err := noncestorage.New(cfg.NonceStorage)
 	if err != nil {
 		return nil, err
 	}
 
+	stopper.Add(nonceStorage)
+
 	if cfg.Upstream.URL == nil {
 		return nil, errors.New("could not start verifier handler: no upstream set")
 	}
 
+	claimsVerifiers := make([]claims.Verifier, 0)
+	if cfg.ClaimsVerifiers != nil {
+		claimsVerifiers = make([]claims.Verifier, 0, len(cfg.ClaimsVerifiers))
+
+		for _, verifierConfig := range cfg.ClaimsVerifiers {
+			verifier, err := claims.New(verifierConfig)
+			if err != nil {
+				return nil, fmt.Errorf("could not instantiate claim verifier: %s", err)
+			}
+
+			stopper.Add(verifier)
+			claimsVerifiers = append(claimsVerifiers, verifier)
+		}
+	} else {
+		log.Info("No claims verifiers specified, upstream should be configured to verify authorization")
+	}
+
 	// Create a reverse proxy.Handler that will verify JWT from http.Requests.
 	handler := func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-		if err = Verify(r, keyServer, nonceStorage, cfg.Audience.URL, cfg.MaxSkew, cfg.MaxTTL); err != nil {
+		signedClaims, err := Verify(r, keyServer, nonceStorage, cfg.Audience.URL, cfg.MaxSkew, cfg.MaxTTL)
+		if err != nil {
 			return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusForbidden, fmt.Sprintf("jwtproxy: unable to verify request: %s", err))
+		}
+
+		// Run through the claims verifiers.
+		for _, verifier := range claimsVerifiers {
+			err := verifier.Handle(r, signedClaims)
+			if err != nil {
+				return r, goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusForbidden, fmt.Sprintf("Error verifying claims: %s", err))
+			}
 		}
 
 		// Route the request to upstream.
@@ -106,10 +139,6 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (*StoppableProxyHandler, e
 
 		return r, nil
 	}
-
-	stopper := stop.NewGroup()
-	stopper.Add(keyServer)
-	stopper.Add(nonceStorage)
 
 	return &StoppableProxyHandler{
 		Handler:  handler,

@@ -29,6 +29,7 @@ import (
 	"github.com/coreos-inc/jwtproxy/proxy"
 	"github.com/coreos-inc/jwtproxy/stop"
 
+	_ "github.com/coreos-inc/jwtproxy/jwt/claims/static"
 	_ "github.com/coreos-inc/jwtproxy/jwt/keyserver/keyregistry"
 	_ "github.com/coreos-inc/jwtproxy/jwt/keyserver/preshared"
 	_ "github.com/coreos-inc/jwtproxy/jwt/noncestorage/local"

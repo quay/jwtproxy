@@ -64,3 +64,7 @@ jwtproxy:
         type: local
         options:
           purge_interval: 1m # interval between expired expired nonce cleanups
+      claims_verifiers:
+      - type: static
+        options:
+          iss: jwtproxy

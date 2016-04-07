@@ -29,13 +29,15 @@ The JWT reverse proxy is used to verify incoming requests that were signed by th
 - Ability to verify the signature based on the specified signing key against a public key fetched from a [key server](https://github.com/coreos-inc/jwtproxy/blob/master/jwt/keyserver/keyregistry/README.md)
 - Ability to verify from a single issuer using a pre-shared public key (likely only useful for testing)
 - Ability to verify SSL requests by doing SSL termination on behalf of the upstream
+- Pluggable claims verifier interface, with bundled static claims verifier implementation
 
 ### Potential Features
 
-- Ability to verify static claims via config
 - Ability to parse and write claims as an unforgeable header sent to the upstream
 - Load balancing among multiple upstreams
 - Ability to dial a unix socket for communication with upstream server
+- Ability to bind a unix socket for use behind another proxy/load balancer/server
+- Implementation of the claims verifier interface which loads a lua file
 
 ## Usage
 

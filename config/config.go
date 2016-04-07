@@ -83,12 +83,13 @@ type SignerProxyConfig struct {
 }
 
 type VerifierConfig struct {
-	Upstream     URL                        `yaml:"upstream"`
-	Audience     URL                        `yaml:"audience"`
-	MaxSkew      time.Duration              `yaml:"max_skew"`
-	MaxTTL       time.Duration              `yaml:"max_ttl"`
-	KeyServer    RegistrableComponentConfig `yaml:"key_server"`
-	NonceStorage RegistrableComponentConfig `yaml:"nonce_storage"`
+	Upstream        URL                          `yaml:"upstream"`
+	Audience        URL                          `yaml:"audience"`
+	MaxSkew         time.Duration                `yaml:"max_skew"`
+	MaxTTL          time.Duration                `yaml:"max_ttl"`
+	KeyServer       RegistrableComponentConfig   `yaml:"key_server"`
+	NonceStorage    RegistrableComponentConfig   `yaml:"nonce_storage"`
+	ClaimsVerifiers []RegistrableComponentConfig `yaml:"claims_verifiers"`
 }
 
 type SignerParams struct {
