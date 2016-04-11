@@ -48,7 +48,6 @@ func init() {
 func Sign(req *http.Request, key *key.PrivateKey, params config.SignerParams) error {
 	// Create Claims.
 	claims := jose.Claims{
-		"kid": key.ID(),
 		"iss": params.Issuer,
 		"aud": req.URL.Scheme + "://" + req.URL.Host,
 		"iat": time.Now().Unix(),
