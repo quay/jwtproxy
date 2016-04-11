@@ -16,18 +16,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/coreos-inc/jwtproxy"
 	"github.com/coreos-inc/jwtproxy/config"
-	"github.com/coreos-inc/jwtproxy/jwt"
-	"github.com/coreos-inc/jwtproxy/proxy"
-	"github.com/coreos-inc/jwtproxy/stop"
 
 	_ "github.com/coreos-inc/jwtproxy/jwt/claims/static"
 	_ "github.com/coreos-inc/jwtproxy/jwt/keyserver/keyregistry"
@@ -57,9 +53,14 @@ func main() {
 	}
 	log.SetLevel(level)
 
+	// Run proxies until SIGINT/SIGTERM is received and then shutdown gracefully.
+	run(config)
+}
+
+func run(config *config.Config) {
 	// Nothing to run? Abort.
 	if !config.VerifierProxy.Enabled && !config.SignerProxy.Enabled {
-		log.Warning("No proxy is enabled. Terminating.")
+		log.Error("No proxy is enabled. Terminating.")
 		return
 	}
 
@@ -67,16 +68,8 @@ func main() {
 	shutdown := make(chan os.Signal)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
-	stopper := stop.NewGroup()
-
-	abort := make(chan error)
-	if config.SignerProxy.Enabled {
-		go startForwardProxy(config.SignerProxy, stopper, abort)
-	}
-
-	if config.VerifierProxy.Enabled {
-		go startReverseProxy(config.VerifierProxy, stopper, abort)
-	}
+	// Run proxies.
+	stopper, abort := jwtproxy.RunProxies(config)
 
 	// Wait for stop signal.
 	select {
@@ -93,90 +86,4 @@ func main() {
 
 	// Wait for everything to stop.
 	<-stopped
-}
-
-func startForwardProxy(fpConfig config.SignerProxyConfig, stopper *stop.Group, abort chan<- error) {
-	// Create signer.
-	signer, err := jwt.NewJWTSignerHandler(fpConfig.Signer)
-	if err != nil {
-		abort <- fmt.Errorf("Failed to create JWT signer: %s", err)
-		return
-	}
-
-	// Create forward proxy.
-	forwardProxy, err := proxy.NewProxy(signer.Handler, fpConfig.CAKeyFile, fpConfig.CACrtFile, fpConfig.TrustedCertificates)
-	if err != nil {
-		stopper.Add(signer)
-		abort <- fmt.Errorf("Failed to create forward proxy: %s", err)
-		return
-	}
-
-	startProxy(
-		abort,
-		fpConfig.ListenAddr,
-		"",
-		"",
-		fpConfig.ShutdownTimeout,
-		"forward",
-		forwardProxy,
-	)
-
-	forwardStopper := func() <-chan struct{} {
-		done := make(chan struct{})
-		go func() {
-			<-forwardProxy.Stop()
-			<-signer.Stop()
-			close(done)
-		}()
-		return done
-	}
-	stopper.AddFunc(forwardStopper)
-}
-
-func startReverseProxy(rpConfig config.VerifierProxyConfig, stopper *stop.Group, abort chan<- error) {
-	// Create verifier.
-	verifier, err := jwt.NewJWTVerifierHandler(rpConfig.Verifier)
-	if err != nil {
-		abort <- fmt.Errorf("Failed to create JWT verifier: %s", err)
-		return
-	}
-
-	// Create reverse proxy.
-	reverseProxy, err := proxy.NewReverseProxy(verifier.Handler)
-	if err != nil {
-		stopper.Add(verifier)
-		abort <- fmt.Errorf("Failed to create reverse proxy: %s", err)
-		return
-	}
-
-	startProxy(
-		abort,
-		rpConfig.ListenAddr,
-		rpConfig.CrtFile,
-		rpConfig.KeyFile,
-		rpConfig.ShutdownTimeout,
-		"reverse",
-		reverseProxy,
-	)
-
-	reverseStopper := func() <-chan struct{} {
-		done := make(chan struct{})
-		go func() {
-			<-reverseProxy.Stop()
-			<-verifier.Stop()
-			close(done)
-		}()
-		return done
-	}
-	stopper.AddFunc(reverseStopper)
-}
-
-func startProxy(abort chan<- error, listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration, proxyName string, proxy *proxy.Proxy) {
-	go func() {
-		log.Infof("Starting %s proxy (Listening on '%s')", proxyName, listenAddr)
-		if err := proxy.Serve(listenAddr, crtFile, keyFile, shutdownTimeout); err != nil {
-			failedToStart := fmt.Errorf("Failed to start %s proxy: %s", proxyName, err)
-			abort <- failedToStart
-		}
-	}()
 }
