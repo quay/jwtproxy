@@ -16,9 +16,6 @@ package jwtproxy
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -29,24 +26,14 @@ import (
 	"github.com/coreos-inc/jwtproxy/stop"
 )
 
-// RunProxies is an utility function that:
-// - starts both the JWT verifier and signer proxies (if enabled),
-// - waits until SIGINT/SIGTERM is received,
-// - stops gracefully the proxies,
-func RunProxies(config *config.Config) {
-	// Nothing to run? Abort.
-	if !config.VerifierProxy.Enabled && !config.SignerProxy.Enabled {
-		log.Warning("No proxy is enabled. Terminating.")
-		return
-	}
-
-	// Create shutdown channel and make it listen to SIGINT and SIGTERM.
-	shutdown := make(chan os.Signal)
-	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
-
+// RunProxies is an utility function that starts both the JWT verifier and signer proxies
+// in their own goroutines and returns a stop.Group intance that give the caller the ability to
+// stop them gracefully.
+// Potential startup errors are sent to the abort chan.
+func RunProxies(config *config.Config) (*stop.Group, chan error) {
 	stopper := stop.NewGroup()
-
 	abort := make(chan error)
+
 	if config.SignerProxy.Enabled {
 		go StartForwardProxy(config.SignerProxy, stopper, abort)
 	}
@@ -55,26 +42,12 @@ func RunProxies(config *config.Config) {
 		go StartReverseProxy(config.VerifierProxy, stopper, abort)
 	}
 
-	// Wait for stop signal.
-	select {
-	case <-shutdown:
-		log.Info("Received stop signal. Stopping gracefully...")
-	case aborted := <-abort:
-		log.Error(aborted)
-	}
-
-	stopped := stopper.Stop()
-
-	// Restore the original behavior in case we need to force shutdown.
-	signal.Reset(syscall.SIGINT, syscall.SIGTERM)
-
-	// Wait for everything to stop.
-	<-stopped
+	return stopper, abort
 }
 
 // StartForwardProxy starts a new signer proxy in its own goroutine.
 // Also adds a graceful stop function to the specified stop.Group.
-// Potential startup errors will be sent to the abort chan.
+// Potential startup errors are sent to the abort chan.
 func StartForwardProxy(fpConfig config.SignerProxyConfig, stopper *stop.Group, abort chan<- error) {
 	// Create signer.
 	signer, err := jwt.NewJWTSignerHandler(fpConfig.Signer)

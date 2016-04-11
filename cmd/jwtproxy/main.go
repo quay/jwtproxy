@@ -17,6 +17,8 @@ package main
 import (
 	"flag"
 	"os"
+	"os/signal"
+	"syscall"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -51,6 +53,37 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	// Run the proxies.
-	jwtproxy.RunProxies(config)
+	// Run proxies until SIGINT/SIGTERM is received and then shutdown gracefully.
+	run(config)
+}
+
+func run(config *config.Config) {
+	// Nothing to run? Abort.
+	if !config.VerifierProxy.Enabled && !config.SignerProxy.Enabled {
+		log.Error("No proxy is enabled. Terminating.")
+		return
+	}
+
+	// Create shutdown channel and make it listen to SIGINT and SIGTERM.
+	shutdown := make(chan os.Signal)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+
+	// Run proxies.
+	stopper, abort := jwtproxy.RunProxies(config)
+
+	// Wait for stop signal.
+	select {
+	case <-shutdown:
+		log.Info("Received stop signal. Stopping gracefully...")
+	case aborted := <-abort:
+		log.Error(aborted)
+	}
+
+	stopped := stopper.Stop()
+
+	// Restore the original behavior in case we need to force shutdown.
+	signal.Reset(syscall.SIGINT, syscall.SIGTERM)
+
+	// Wait for everything to stop.
+	<-stopped
 }
