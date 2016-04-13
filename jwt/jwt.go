@@ -88,10 +88,9 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 
 	// Verify claims.
 	now := time.Now().UTC()
-
-	kid, exists, err := claims.StringClaim("kid")
-	if !exists || err != nil {
-		return nil, errors.New("Missing or invalid 'kid' claim")
+	kid, exists := jwt.Header["kid"]
+	if !exists {
+		return nil, errors.New("Missing 'kid' claim")
 	}
 	iss, exists, err := claims.StringClaim("iss")
 	if !exists || err != nil {
