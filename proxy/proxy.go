@@ -17,11 +17,14 @@ package proxy
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -42,30 +45,56 @@ type Proxy struct {
 }
 
 func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration) error {
-	grace := &graceful.Server{
+	// Create a graceful server.
+	proxy.grace = &graceful.Server{
 		NoSignalHandling: true,
 		Server: &http.Server{
 			Addr:    listenAddr,
 			Handler: proxy.ProxyHttpServer,
 		},
 	}
-	proxy.grace = grace
 	proxy.shutdownTimeout = shutdownTimeout
 
+	// Create an appropriate net.Listener.
 	var err error
-	if crtFile != "" && keyFile != "" {
-		err = grace.ListenAndServeTLS(crtFile, keyFile)
+	var listener net.Listener
+
+	if strings.HasPrefix(listenAddr, "unix:") {
+		if crtFile != "" && keyFile != "" {
+			return errors.New("Proxy is configured to terminate TLS but proxy listens on an UNIX socket.")
+		}
+
+		unixFile := strings.TrimPrefix(listenAddr, "unix:")
+
+		listener, err = net.Listen("unix", unixFile)
+		if err != nil {
+			return err
+		}
+
+		defer os.Remove(unixFile)
 	} else {
-		err = grace.ListenAndServe()
+		if crtFile != "" && keyFile != "" {
+			listener, err = proxy.grace.ListenTLS(crtFile, keyFile)
+			if err != nil {
+				return err
+			}
+		} else {
+			listener, err = net.Listen("tcp", listenAddr)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	if err != nil {
+	// Serve traffic.
+	proxy.started = true
+	defer func() { proxy.started = false }()
+
+	if err = proxy.grace.Serve(listener); err != nil {
 		if opErr, ok := err.(*net.OpError); !ok || (ok && opErr.Op != "accept") {
 			return err
 		}
 	}
-
-	proxy.started = true
 
 	return nil
 }
