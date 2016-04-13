@@ -17,6 +17,7 @@ package proxy
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -59,6 +60,10 @@ func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout t
 	var listener net.Listener
 
 	if strings.HasPrefix(listenAddr, "unix:") {
+		if crtFile != "" && keyFile != "" {
+			return errors.New("Proxy is configured to terminate TLS but proxy listens on an UNIX socket.")
+		}
+
 		unixFile := strings.TrimPrefix(listenAddr, "unix:")
 
 		listener, err = net.Listen("unix", unixFile)
@@ -67,10 +72,6 @@ func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout t
 		}
 
 		defer os.Remove(unixFile)
-
-		if crtFile != "" && keyFile != "" {
-			log.Warning("Proxy is configured to terminate TLS but proxy listens on an UNIX socket.")
-		}
 	} else {
 		if crtFile != "" && keyFile != "" {
 			listener, err = proxy.grace.ListenTLS(crtFile, keyFile)
