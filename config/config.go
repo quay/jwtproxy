@@ -115,7 +115,7 @@ func DefaultConfig() Config {
 		SignerProxy: SignerProxyConfig{
 			Enabled:         true,
 			ListenAddr:      ":8080",
-			ShutdownTimeout: 1 * time.Minute,
+			ShutdownTimeout: 5 * time.Second,
 			Signer: SignerConfig{
 				SignerParams: SignerParams{
 					Issuer:         "jwtproxy",
@@ -128,7 +128,7 @@ func DefaultConfig() Config {
 		VerifierProxy: VerifierProxyConfig{
 			Enabled:         true,
 			ListenAddr:      ":8081",
-			ShutdownTimeout: 1 * time.Minute,
+			ShutdownTimeout: 5 * time.Second,
 			Verifier: VerifierConfig{
 				MaxSkew: 5 * time.Minute,
 				MaxTTL:  5 * time.Minute,

@@ -57,9 +57,6 @@ jwtproxy:
         type: keyregistry
         options:
           registry: http://localhost:8888/
-          cache:
-            duration: 10m # amount of time public keys are cached locally
-            purge_interval: 1m # interval between cache cleanups
       nonce_storage:
         type: local
         options:

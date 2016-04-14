@@ -3,7 +3,6 @@ package keyregistry
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,12 +14,13 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/key"
-	"github.com/patrickmn/go-cache"
+	"github.com/gregjones/httpcache"
 	"gopkg.in/yaml.v2"
 
 	"github.com/coreos-inc/jwtproxy/config"
 	"github.com/coreos-inc/jwtproxy/jwt"
 	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
+	"github.com/coreos-inc/jwtproxy/jwt/keyserver/keyregistry/keycache"
 )
 
 func init() {
@@ -28,44 +28,32 @@ func init() {
 	keyserver.RegisterManager("keyregistry", constructManager)
 }
 
-type Client struct {
-	cache        *cache.Cache
+type client struct {
+	cache        keycache.Cache
 	registry     *url.URL
 	signerParams config.SignerParams
 	stopping     chan struct{}
 	inFlight     *sync.WaitGroup
+	httpClient   *http.Client
 }
 
 type Config struct {
 	Registry config.URL `yaml:"registry"`
 }
 
-type ManagerConfig struct {
+type ReaderConfig struct {
 	Config `yaml:",inline"'`
-	Cache  *CacheConfig `yaml:"cache"`
+	Cache  *config.RegistrableComponentConfig `yaml:"cache"`
 }
 
-type CacheConfig struct {
-	Duration      time.Duration `yaml:"duration"`
-	PurgeInterval time.Duration `yaml:"purge_interval"`
-}
-
-func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, error) {
-	// Query cache for public key.
-	if krc.cache != nil {
-		if cpk, found := krc.cache.Get(issuer + keyID); found {
-			pk := cpk.(key.PublicKey)
-			return &pk, nil
-		}
-	}
-
+func (krc *client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, error) {
 	// Query key registry for a public key matching the given issuer and key ID.
 	pubkeyURL := krc.absURL("services", issuer, "keys", keyID)
 	pubkeyReq, err := krc.prepareRequest("GET", pubkeyURL, nil)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Do(pubkeyReq)
+	resp, err := krc.httpClient.Do(pubkeyReq)
 	if err != nil {
 		return nil, err
 	}
@@ -89,15 +77,10 @@ func (krc *Client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 		return nil, err
 	}
 
-	// Cache the public key.
-	if krc.cache != nil {
-		krc.cache.Set(issuer+keyID, pk, cache.DefaultExpiration)
-	}
-
 	return &pk, nil
 }
 
-func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPolicy, signingKey *key.PrivateKey) *keyserver.PublishResult {
+func (krc *client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPolicy, signingKey *key.PrivateKey) *keyserver.PublishResult {
 	// Create a channel that will track the response status.
 	publishResult := keyserver.NewPublishResult()
 	krc.inFlight.Add(1)
@@ -160,7 +143,7 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 						return
 					}
 
-					checkPublished, err := http.DefaultClient.Do(checkReq)
+					checkPublished, err := krc.httpClient.Do(checkReq)
 					if err != nil {
 						publishResult.SetError(err)
 						return
@@ -207,7 +190,7 @@ func (krc *Client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 	return publishResult
 }
 
-func (krc *Client) DeletePublicKey(keyID string, signingKey *key.PrivateKey) error {
+func (krc *client) DeletePublicKey(keyID string, signingKey *key.PrivateKey) error {
 	url := krc.absURL("services", krc.signerParams.Issuer, "keys", keyID)
 
 	resp, err := krc.signAndDo("DELETE", url, nil, signingKey)
@@ -222,17 +205,24 @@ func (krc *Client) DeletePublicKey(keyID string, signingKey *key.PrivateKey) err
 	return nil
 }
 
-func (krc *Client) Stop() <-chan struct{} {
+func (krc *client) Stop() <-chan struct{} {
 	finished := make(chan struct{})
+	// Stop the in flight requests
 	close(krc.stopping)
 	go func() {
 		krc.inFlight.Wait()
+
+		// Now stop the cache
+		if krc.cache != nil {
+			<-krc.cache.Stop()
+		}
+
 		close(finished)
 	}()
 	return finished
 }
 
-func (krc *Client) signAndDo(method string, url *url.URL, body io.Reader, signingKey *key.PrivateKey) (*http.Response, error) {
+func (krc *client) signAndDo(method string, url *url.URL, body io.Reader, signingKey *key.PrivateKey) (*http.Response, error) {
 	// Create an HTTP request to the key server to publish a new key.
 	req, err := krc.prepareRequest(method, url, body)
 	if err != nil {
@@ -246,10 +236,10 @@ func (krc *Client) signAndDo(method string, url *url.URL, body io.Reader, signin
 	}
 
 	// Execute the request, if it returns a 200, close the channel immediately.
-	return http.DefaultClient.Do(req)
+	return krc.httpClient.Do(req)
 }
 
-func (krc *Client) prepareRequest(method string, url *url.URL, body io.Reader) (*http.Request, error) {
+func (krc *client) prepareRequest(method string, url *url.URL, body io.Reader) (*http.Request, error) {
 	// Create an HTTP request to the key server to publish a new key.
 	req, err := http.NewRequest(method, url.String(), body)
 	if err != nil {
@@ -266,7 +256,7 @@ func (krc *Client) prepareRequest(method string, url *url.URL, body io.Reader) (
 	return req, nil
 }
 
-func (krc *Client) absURL(pathParams ...string) *url.URL {
+func (krc *client) absURL(pathParams ...string) *url.URL {
 	escaped := make([]string, 0, len(pathParams)+1)
 	escaped = append(escaped, krc.registry.Path)
 	for _, pathParam := range pathParams {
@@ -286,16 +276,35 @@ func constructReader(registrableComponentConfig config.RegistrableComponentConfi
 	if err != nil {
 		return nil, err
 	}
-	var cfg Config
+	var cfg ReaderConfig
 	err = yaml.Unmarshal(bytes, &cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Client{
-		registry: cfg.Registry.URL,
-		inFlight: &sync.WaitGroup{},
-		stopping: make(chan struct{}),
+	// Construct the public key cache.
+	cacheConfig := config.RegistrableComponentConfig{
+		Type: "memory",
+	}
+	if cfg.Cache != nil {
+		cacheConfig = *cfg.Cache
+	}
+
+	cache, err := keycache.NewCache(cacheConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to construct cache: %s", err)
+	}
+
+	httpClient := &http.Client{
+		Transport: httpcache.NewTransport(cache),
+	}
+
+	return &client{
+		registry:   cfg.Registry.URL,
+		inFlight:   &sync.WaitGroup{},
+		stopping:   make(chan struct{}),
+		cache:      cache,
+		httpClient: httpClient,
 	}, nil
 }
 
@@ -304,31 +313,17 @@ func constructManager(registrableComponentConfig config.RegistrableComponentConf
 	if err != nil {
 		return nil, err
 	}
-	var cfg ManagerConfig
+	var cfg Config
 	err = yaml.Unmarshal(bytes, &cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	// Initialize a cache if configured.
-	var c *cache.Cache
-	if cfg.Cache != nil {
-		if cfg.Cache.Duration == 0 {
-			log.Warning("Key registry is configured to cache public keys but no expiration has been set. This could lead to memory outage.")
-		} else if cfg.Cache.Duration > 0 && cfg.Cache.PurgeInterval <= 0 {
-			return nil, errors.New("Key registry is configured to cache public keys, which have an expiration time, but no purge interval has been set.")
-		}
-
-		c = cache.New(cfg.Cache.Duration, cfg.Cache.PurgeInterval)
-	} else {
-		log.Warning("Key registry is not configured to use a cache. This could introduce undesired latency during signature verification.")
-	}
-
-	return &Client{
+	return &client{
 		registry:     cfg.Registry.URL,
-		cache:        c,
 		signerParams: signerParams,
 		inFlight:     &sync.WaitGroup{},
 		stopping:     make(chan struct{}),
+		httpClient:   http.DefaultClient,
 	}, nil
 }
