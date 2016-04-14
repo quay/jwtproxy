@@ -151,7 +151,7 @@ func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertifi
 func NewReverseProxy(proxyHandler Handler) (*Proxy, error) {
 	// Create a reverse proxy.
 	reverseProxy := goproxy.NewReverseProxyHttpServer()
-	reverseProxy.Tr = &http.Transport{}
+	reverseProxy.Tr = http.DefaultTransport.(*http.Transport)
 	reverseProxy.Verbose = log.GetLevel() == log.DebugLevel
 
 	// Handle requests with the specified handler.

@@ -149,6 +149,7 @@ jwtproxy:
     enabled: <bool|true>
 
     # Addr at which to listen for requests
+    # It can either be an HTTP(s) URL or an UNIX socket path prefixed by 'unix:'
     listen_addr: <string|:8081>
     shutdown_timeout: <time.Duration|1m>
 
@@ -158,6 +159,7 @@ jwtproxy:
 
     verifier:
       # Upstream server to which to forward requests
+      # It can either be an HTTP(s) URL or an UNIX socket path prefixed by 'unix:'
       upstream: <string|nil>
 
       # Required value for audience claim,

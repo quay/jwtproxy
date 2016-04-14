@@ -17,6 +17,7 @@ package jwt
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -81,13 +82,13 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (*StoppableProxyHandler, e
 		return nil, errors.New("no key server specified")
 	}
 
+	stopper := stop.NewGroup()
+
 	// Create a KeyServer that will provide public keys for signature verification.
 	keyServer, err := keyserver.NewReader(cfg.KeyServer)
 	if err != nil {
 		return nil, err
 	}
-
-	stopper := stop.NewGroup()
 	stopper.Add(keyServer)
 
 	// Create a NonceStorage that will create nonces for signing.
@@ -95,14 +96,13 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (*StoppableProxyHandler, e
 	if err != nil {
 		return nil, err
 	}
-
 	stopper.Add(nonceStorage)
 
-	if cfg.Upstream.URL == nil {
-		return nil, errors.New("could not start verifier handler: no upstream set")
-	}
+	// Create an appropriate routing policy.
+	route := newRouter(cfg.Upstream.URL)
 
-	claimsVerifiers := make([]claims.Verifier, 0)
+	// Create the required list of claims.Verifier.
+	var claimsVerifiers []claims.Verifier
 	if cfg.ClaimsVerifiers != nil {
 		claimsVerifiers = make([]claims.Verifier, 0, len(cfg.ClaimsVerifiers))
 
@@ -135,7 +135,7 @@ func NewJWTVerifierHandler(cfg config.VerifierConfig) (*StoppableProxyHandler, e
 		}
 
 		// Route the request to upstream.
-		rerouteRequest(r, cfg.Upstream.URL)
+		route(r, ctx)
 
 		return r, nil
 	}
@@ -154,17 +154,38 @@ func errorResponse(r *http.Request, err error) *http.Response {
 	return goproxy.NewResponse(r, goproxy.ContentTypeText, http.StatusBadGateway, fmt.Sprintf("jwtproxy: unable to sign request: %s", err))
 }
 
-func rerouteRequest(r *http.Request, upstream *url.URL) {
-	upstreamQuery := upstream.RawQuery
+type router func(r *http.Request, ctx *goproxy.ProxyCtx)
 
-	r.URL.Scheme = upstream.Scheme
-	r.URL.Host = upstream.Host
+func newRouter(upstream *url.URL) router {
+	if strings.HasPrefix(upstream.String(), "unix:") {
+		// Upstream is an UNIX socket.
+		// - Use a goproxy.RoundTripper that has an "unix" net.Dial.
+		// - Rewrite the request's scheme to be "http" and the host to be the encoded path to the
+		//   socket.
+		sockPath := strings.TrimPrefix(upstream.String(), "unix:")
+		roundTripper := newUnixRoundTripper(sockPath)
+		return func(r *http.Request, ctx *goproxy.ProxyCtx) {
+			ctx.RoundTripper = roundTripper
+			r.URL.Scheme = "http"
+			r.URL.Host = sockPath
+		}
+	}
 
-	r.URL.Path = singleJoiningSlash(upstream.Path, r.URL.Path)
-	if upstreamQuery == "" || r.URL.RawQuery == "" {
-		r.URL.RawQuery = upstreamQuery + r.URL.RawQuery
-	} else {
-		r.URL.RawQuery = upstreamQuery + "&" + r.URL.RawQuery
+	// Upstream is an HTTP or HTTPS endpoint.
+	// - Set the request's scheme and host to the upstream ones.
+	// - Prepend the request's path with the upstream path.
+	// - Merge query values from request and upstream.
+	return func(r *http.Request, ctx *goproxy.ProxyCtx) {
+		r.URL.Scheme = upstream.Scheme
+		r.URL.Host = upstream.Host
+		r.URL.Path = singleJoiningSlash(upstream.Path, r.URL.Path)
+
+		upstreamQuery := upstream.RawQuery
+		if upstreamQuery == "" || r.URL.RawQuery == "" {
+			r.URL.RawQuery = upstreamQuery + r.URL.RawQuery
+		} else {
+			r.URL.RawQuery = upstreamQuery + "&" + r.URL.RawQuery
+		}
 	}
 }
 
@@ -178,4 +199,22 @@ func singleJoiningSlash(a, b string) string {
 		return a + "/" + b
 	}
 	return a + b
+}
+
+type unixRoundTripper struct {
+	*http.Transport
+}
+
+func newUnixRoundTripper(sockPath string) *unixRoundTripper {
+	dialer := func(network, addr string) (net.Conn, error) {
+		return net.Dial("unix", sockPath)
+	}
+
+	return &unixRoundTripper{
+		Transport: &http.Transport{Dial: dialer},
+	}
+}
+
+func (urt *unixRoundTripper) RoundTrip(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Response, error) {
+	return urt.Transport.RoundTrip(req)
 }
