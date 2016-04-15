@@ -44,6 +44,7 @@ type KeyPolicy struct {
 
 type Manager interface {
 	stop.Stoppable
+	VerifyPublicKey(keyID string) error
 	PublishPublicKey(key *key.PublicKey, policy *KeyPolicy, signingKey *key.PrivateKey) *PublishResult
 	DeletePublicKey(keyID string, signingKey *key.PrivateKey) error
 }
