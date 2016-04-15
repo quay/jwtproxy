@@ -1,5 +1,7 @@
 # JWT Proxy
 
+[![Docker Repository on Quay](https://quay.io/repository/coreos/jwtproxy/status "Docker Repository on Quay")](https://quay.io/repository/coreos/jwtproxy)
+
 The JWT proxy is intended to be used as a complementary service for authenticating, and possibly authorizing requests made between services.
 There is a forward proxy component, which can be configured to sign outgoing requests to another service, and a reverse proxy component, which can be used to authenticate incoming requests from another service.
 
