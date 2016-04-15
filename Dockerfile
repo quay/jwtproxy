@@ -16,6 +16,7 @@ FROM golang:1.6
 
 MAINTAINER Quentin Machu <quentin.machu@coreos.com>
 
+ENV XDG_CONFIG_HOME=/config/
 ENTRYPOINT ["jwtproxy"]
 CMD ["-config", "/config/config.yaml"]
 VOLUME /config
