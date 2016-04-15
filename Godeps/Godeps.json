@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/coreos-inc/jwtproxy",
 	"GoVersion": "go1.6",
-	"GodepVersion": "v60",
+	"GodepVersion": "v62",
 	"Packages": [
 		"./..."
 	],
@@ -51,6 +51,10 @@
 		{
 			"ImportPath": "github.com/coreos/pkg/timeutil",
 			"Rev": "1914e367e85eaf0c25d495b48e060dfe6190f8d0"
+		},
+		{
+			"ImportPath": "github.com/gregjones/httpcache",
+			"Rev": "4b02602f71f4346dfbd3ef8f4d15cc2a318b32c1"
 		},
 		{
 			"ImportPath": "github.com/jonboulle/clockwork",
