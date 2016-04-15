@@ -80,6 +80,11 @@ func (krc *client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 	return &pk, nil
 }
 
+func (krc *client) VerifyPublicKey(keyID string) error {
+	_, err := krc.GetPublicKey(krc.signerParams.Issuer, keyID)
+	return err
+}
+
 func (krc *client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPolicy, signingKey *key.PrivateKey) *keyserver.PublishResult {
 	// Create a channel that will track the response status.
 	publishResult := keyserver.NewPublishResult()

@@ -95,11 +95,11 @@ func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
 		return nil, err
 	}
 
-	privateKey.Precompute()
-
 	if err := privateKey.Validate(); err != nil {
 		return nil, err
 	}
+
+	privateKey.Precompute()
 
 	return privateKey, err
 }
