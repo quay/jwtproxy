@@ -17,10 +17,10 @@ import (
 	"github.com/gregjones/httpcache"
 	"gopkg.in/yaml.v2"
 
-	"github.com/coreos-inc/jwtproxy/config"
-	"github.com/coreos-inc/jwtproxy/jwt"
-	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
-	"github.com/coreos-inc/jwtproxy/jwt/keyserver/keyregistry/keycache"
+	"github.com/coreos/jwtproxy/config"
+	"github.com/coreos/jwtproxy/jwt"
+	"github.com/coreos/jwtproxy/jwt/keyserver"
+	"github.com/coreos/jwtproxy/jwt/keyserver/keyregistry/keycache"
 )
 
 func init() {
