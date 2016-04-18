@@ -27,9 +27,9 @@ import (
 	"github.com/coreos/go-oidc/key"
 	"gopkg.in/yaml.v2"
 
-	"github.com/coreos-inc/jwtproxy/config"
-	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
-	"github.com/coreos-inc/jwtproxy/stop"
+	"github.com/coreos/jwtproxy/config"
+	"github.com/coreos/jwtproxy/jwt/keyserver"
+	"github.com/coreos/jwtproxy/stop"
 )
 
 func init() {

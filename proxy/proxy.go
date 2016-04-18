@@ -28,7 +28,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/coreos-inc/jwtproxy/stop"
+	"github.com/coreos/jwtproxy/stop"
 	"github.com/quentin-m/goproxy"
 	"github.com/tylerb/graceful"
 )

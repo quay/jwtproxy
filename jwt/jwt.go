@@ -27,9 +27,9 @@ import (
 	"github.com/coreos/go-oidc/key"
 	"github.com/coreos/go-oidc/oidc"
 
-	"github.com/coreos-inc/jwtproxy/config"
-	"github.com/coreos-inc/jwtproxy/jwt/keyserver"
-	"github.com/coreos-inc/jwtproxy/jwt/noncestorage"
+	"github.com/coreos/jwtproxy/config"
+	"github.com/coreos/jwtproxy/jwt/keyserver"
+	"github.com/coreos/jwtproxy/jwt/noncestorage"
 )
 
 const (

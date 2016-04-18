@@ -18,9 +18,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gregjones/httpcache"
 
-	"github.com/coreos-inc/jwtproxy/config"
-	"github.com/coreos-inc/jwtproxy/jwt/keyserver/keyregistry/keycache"
-	"github.com/coreos-inc/jwtproxy/stop"
+	"github.com/coreos/jwtproxy/config"
+	"github.com/coreos/jwtproxy/jwt/keyserver/keyregistry/keycache"
+	"github.com/coreos/jwtproxy/stop"
 )
 
 func init() {
