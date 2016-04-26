@@ -83,7 +83,7 @@ func constructor(registrableComponentConfig config.RegistrableComponentConfig, s
 			log.Debug("Successfully loaded and verified private key at path: ", privateKeyPath)
 			activeKey = storedPrivateKey
 		} else {
-			log.Debug("Unable to verify loaded private key: ", err)
+			log.WithError(err).Fatal("Unable to verify loaded private key: ", err)
 		}
 	} else {
 		log.Debug("Unable to load private key: ", err)
