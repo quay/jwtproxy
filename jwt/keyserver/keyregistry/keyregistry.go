@@ -209,8 +209,8 @@ func (krc *client) PublishPublicKey(key *key.PublicKey, policy *keyserver.KeyPol
 	return publishResult
 }
 
-func (krc *client) DeletePublicKey(keyID string, signingKey *key.PrivateKey) error {
-	url := krc.absURL("services", krc.signerParams.Issuer, "keys", keyID)
+func (krc *client) DeletePublicKey(signingKey *key.PrivateKey) error {
+	url := krc.absURL("services", krc.signerParams.Issuer, "keys", signingKey.ID())
 
 	resp, err := krc.signAndDo("DELETE", url, nil, signingKey)
 	if err != nil {

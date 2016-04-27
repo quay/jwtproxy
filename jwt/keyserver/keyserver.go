@@ -46,7 +46,7 @@ type Manager interface {
 	stop.Stoppable
 	VerifyPublicKey(keyID string) error
 	PublishPublicKey(key *key.PublicKey, policy *KeyPolicy, signingKey *key.PrivateKey) *PublishResult
-	DeletePublicKey(keyID string, signingKey *key.PrivateKey) error
+	DeletePublicKey(toRevoke *key.PrivateKey) error
 }
 
 var readers = make(map[string]ReaderConstructor)
