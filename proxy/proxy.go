@@ -23,7 +23,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -32,8 +31,6 @@ import (
 	"github.com/quentin-m/goproxy"
 	"github.com/tylerb/graceful"
 )
-
-const httpRegexp = `^.*:80$`
 
 type Handler func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response)
 
@@ -113,12 +110,8 @@ func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertifi
 	// Initialize the forward proxy's MITM handler using the specified CA key pair.
 	var mitmHandler goproxy.FuncHttpsHandler
 	if caKeyPath == "" || caCertPath == "" {
+		mitmHandler = rejectMITMHandler()
 		log.Warning("No CA keypair specified, the proxy will not be able to forward requests to TLS endpoints.")
-
-		mitmHandler, err = rejectMITMHandler()
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		mitmHandler, err = setupMITMHandler(caKeyPath, caCertPath)
 		if err != nil {
@@ -134,16 +127,9 @@ func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertifi
 	}
 	proxy.Verbose = log.GetLevel() == log.DebugLevel
 
-	// Handle HTTP requests with the specified handler.
-	p := proxy.OnRequest(goproxy.ReqHostMatches(regexp.MustCompile(httpRegexp)))
-	p.DoFunc(proxyHandler)
-
 	// Handle HTTPs requests with MITM and the specified handler.
-	p = proxy.OnRequest(goproxy.Not(goproxy.ReqHostMatches(regexp.MustCompile(httpRegexp))))
-	if mitmHandler != nil {
-		p.HandleConnect(mitmHandler)
-	}
-	p.DoFunc(proxyHandler)
+	proxy.OnRequest().DoFunc(proxyHandler)
+	proxy.OnRequest().HandleConnect(mitmHandler)
 
 	return &Proxy{ProxyHttpServer: proxy}, nil
 }
@@ -174,12 +160,12 @@ func setupMITMHandler(caKeyPath, caCertPath string) (goproxy.FuncHttpsHandler, e
 	}, nil
 }
 
-func rejectMITMHandler() (goproxy.FuncHttpsHandler, error) {
+func rejectMITMHandler() (goproxy.FuncHttpsHandler) {
 	return func(host string, ctx *goproxy.ProxyCtx) (*goproxy.ConnectAction, string) {
 		return &goproxy.ConnectAction{
 			Action: goproxy.ConnectReject,
 		}, host
-	}, nil
+	}
 }
 
 func setupClientTransport(certificatePaths []string) (*http.Transport, error) {
