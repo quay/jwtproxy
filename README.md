@@ -274,7 +274,7 @@ The key pair should be specified using the `key_file` and `crt_file` parameters 
 Also, because the key pair is self-signed, the certificate must be trusted by the forward proxy. This can be done by trusting the certificate system-wide or by specifying it using the `trusted_certificates` list parameter in the [Signer configuration](#signer-config).
 
 
-## Build Binary
+## Build Linux Binary
 
 ```
 docker build -t jwtproxy .
