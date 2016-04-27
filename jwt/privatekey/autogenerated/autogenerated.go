@@ -83,6 +83,15 @@ func constructor(registrableComponentConfig config.RegistrableComponentConfig, s
 			// We verified the key, nothing more to do
 			log.Debug("Successfully loaded and verified private key at path: ", privateKeyPath)
 			activeKey = storedPrivateKey
+		} else {
+			switch err {
+			case keyserver.ErrPublicKeyNotFound:
+				log.Debug("Public Key not found - generating a new key")
+			case keyserver.ErrPublicKeyExpired:
+				log.WithError(err).Fatal("Public key has expired; delete or renew it.")
+			case keyserver.ErrUnkownResponse:
+				log.WithError(err).Fatal("Uknown response from the keyserver.")
+			}
 		}
 	} else {
 		log.Debug("Unable to load private key: ", err)

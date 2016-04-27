@@ -71,17 +71,17 @@ func (krc *client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 	if err != nil {
 		return nil, err
 	}
-
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, keyserver.ErrPublicKeyNotFound
-	} else if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(
-			"Unexpected response code when looking for public key: got status code %d, expected 200",
-			resp.StatusCode,
-		)
-	}
-
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		switch resp.StatusCode {
+		case http.StatusNotFound:
+			return nil, keyserver.ErrPublicKeyNotFound
+		case http.StatusForbidden:
+			return nil, keyserver.ErrPublicKeyExpired
+		default:
+			return nil, keyserver.ErrUnkownResponse
+		}
+	}
 
 	// Decode the public key we received as a JSON-encoded JWK.
 	var pk key.PublicKey
