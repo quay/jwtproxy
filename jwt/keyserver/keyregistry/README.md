@@ -64,7 +64,13 @@ Response if the key was published but **awaiting approval**:
 409 Conflict
 ```
 
-Response if the key is **unknown or expired**:
+Response if the key was previously approved, but is now **expired**:
+
+```
+403 Forbidden
+```
+
+Response if the key is **unknown**:
 
 ```
 404 Unknown
