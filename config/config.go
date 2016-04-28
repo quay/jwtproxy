@@ -51,6 +51,35 @@ func (u URL) MarshalYAML() (interface{}, error) {
 	return nil, nil
 }
 
+type DefaultVerifierProxyConfig VerifierProxyConfig
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface for URLs.
+func (cfg *VerifierProxyConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	tempCfg := DefaultVerifierProxyConfig{
+		Enabled:         true,
+		ListenAddr:      ":8082",
+		ShutdownTimeout: 5 * time.Second,
+		Verifier: VerifierConfig{
+			MaxSkew: 5 * time.Minute,
+			MaxTTL:  5 * time.Minute,
+			NonceStorage: RegistrableComponentConfig{
+				Type: "local",
+				Options: map[string]interface{}{
+					"PurgeInterval": 1 * time.Minute,
+				},
+			},
+		},
+	}
+
+	if err := unmarshal(&tempCfg); err != nil {
+		return err
+	}
+
+	*cfg = VerifierProxyConfig(tempCfg)
+
+	return nil
+}
+
 // Represents a config file, which may have configuration for other programs
 // as a top level key.
 type configFile struct {
@@ -59,8 +88,8 @@ type configFile struct {
 
 // Config is the global configuration
 type Config struct {
-	SignerProxy   SignerProxyConfig   `yaml:"signer_proxy"`
-	VerifierProxy VerifierProxyConfig `yaml:"verifier_proxy"`
+	SignerProxy     SignerProxyConfig     `yaml:"signer_proxy"`
+	VerifierProxies []VerifierProxyConfig `yaml:"verifier_proxies"`
 }
 
 type VerifierProxyConfig struct {
@@ -122,21 +151,6 @@ func DefaultConfig() Config {
 					ExpirationTime: 5 * time.Minute,
 					MaxSkew:        1 * time.Minute,
 					NonceLength:    32,
-				},
-			},
-		},
-		VerifierProxy: VerifierProxyConfig{
-			Enabled:         true,
-			ListenAddr:      ":8081",
-			ShutdownTimeout: 5 * time.Second,
-			Verifier: VerifierConfig{
-				MaxSkew: 5 * time.Minute,
-				MaxTTL:  5 * time.Minute,
-				NonceStorage: RegistrableComponentConfig{
-					Type: "local",
-					Options: map[string]interface{}{
-						"PurgeInterval": 1 * time.Minute,
-					},
 				},
 			},
 		},

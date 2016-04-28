@@ -60,7 +60,15 @@ func main() {
 
 func run(config *config.Config) {
 	// Nothing to run? Abort.
-	if !config.VerifierProxy.Enabled && !config.SignerProxy.Enabled {
+	var verifierEnabled bool
+	for _, verifierCfg := range config.VerifierProxies {
+		if verifierCfg.Enabled {
+			verifierEnabled = true
+			break
+		}
+	}
+
+	if !verifierEnabled && !config.SignerProxy.Enabled {
 		log.Error("No proxy is enabled. Terminating.")
 		return
 	}

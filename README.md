@@ -54,7 +54,10 @@ The configuration yaml file contains a `jwtproxy` top level config flag, which a
 ```yaml
 jwtproxy:
   <Signer Config>
-  <Verifier Config>
+
+  verifier_proxies:
+  - <Verifier Config>
+  - <Verifier Config>
 ```
 
 ### Signer Config
@@ -146,12 +149,12 @@ private_key:
 
 ### Verifier Config
 
-Configures and enables the JWT verifying reverse proxy.
+Configures and enables one or more JWT verifying reverse proxyies.
 
 ```yaml
 jwtproxy:
-  verifier_proxy:
-    enabled: <bool|true>
+  verifier_proxies:
+  - enabled: <bool|true>
 
     # Addr at which to listen for requests
     # It can either be an HTTP(s) URL or an UNIX socket path prefixed by 'unix:'
