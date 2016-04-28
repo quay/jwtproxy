@@ -38,8 +38,10 @@ func RunProxies(config *config.Config) (*stop.Group, chan error) {
 		go StartForwardProxy(config.SignerProxy, stopper, abort)
 	}
 
-	if config.VerifierProxy.Enabled {
-		go StartReverseProxy(config.VerifierProxy, stopper, abort)
+	for _, verifierConfig := range config.VerifierProxies {
+		if verifierConfig.Enabled {
+			go StartReverseProxy(verifierConfig, stopper, abort)
+		}
 	}
 
 	return stopper, abort
