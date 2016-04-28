@@ -21,6 +21,10 @@ The JWT forward proxy is used to sign outgoing requests with a JWT using a priva
 - Ability to append static claims via config
 - Ability to read dynamic claims out of a request header and turn them into JWT claims
 
+### Limitations
+
+- When the proxy is configured to use MITM SSL, the `CONNECT` tunneling mechanism is only available to forward HTTPS requests. By default, most clients exclusively use `CONNECT` for HTTPS requests, which is 100% supported.
+
 ## JWT Reverse Proxy
 
 The JWT reverse proxy is used to verify incoming requests that were signed by the forward proxy.
