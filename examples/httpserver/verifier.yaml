@@ -1,0 +1,26 @@
+jwtproxy:
+  verifier_proxies:
+  - listen_addr: :8080
+
+    verifier:
+      upstream: http://localhost:8081/
+      audience: http://localhost:8080/ # host used to talk to the verifier proxy
+      max_skew: 1m
+      max_ttl: 5m
+      key_server:
+        type: preshared
+        options:
+          issuer: jwtproxy
+          key_id: mykey
+          public_key_path: mykey.pub
+      claims_verifiers:
+      - type: static
+        options:
+          iss: jwtproxy
+
+    # Key pair used to terminate TLS.
+    #key_file: localhost.key
+    #crt_file: localhost.crt
+
+  signer_proxy:
+    enabled: false

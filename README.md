@@ -50,7 +50,7 @@ The JWT reverse proxy is used to verify incoming requests that were signed by th
 Run with:
 
 ```bash
-jwtproxy --config config.yaml
+jwtproxy -config config.yaml
 ```
 
 The configuration yaml file contains a `jwtproxy` top level config flag, which allows a single yaml file to be used to configure multiple services. The presence or absence of a signer config or verifier config block will enable the forward and reverse proxy respectively.
@@ -63,6 +63,10 @@ jwtproxy:
   - <Verifier Config>
   - <Verifier Config>
 ```
+
+### Examples
+
+Usage examples are provided in the [examples](examples/) folder.
 
 ### Signer Config
 
