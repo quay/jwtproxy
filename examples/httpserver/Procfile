@@ -1,0 +1,3 @@
+web:       go get github.com/rif/spark                    && $GOPATH/bin/spark -port 8081 "Welcome to this authenticated web service."
+signer:    go get github.com/coreos/jwtproxy/cmd/jwtproxy && $GOPATH/bin/jwtproxy -config $(pwd)/signer.yaml
+verifier:  go get github.com/coreos/jwtproxy/cmd/jwtproxy && $GOPATH/bin/jwtproxy -config $(pwd)/verifier.yaml
