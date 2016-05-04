@@ -1,0 +1,24 @@
+jwtproxy:
+  signer_proxy:
+    listen_addr: :3128
+    shutdown_timeout: 3s
+
+    signer:
+      issuer: jwtproxy
+      expiration_time: 5m
+      max_skew: 1m
+      nonce_length: 32
+      private_key:
+        type: preshared
+        options:
+          key_id: mykey
+          private_key_path: /etc/jwtproxy/mykey.key
+
+    # To sign requests to HTTPS endpoints, we need to
+    # specify a CA certificate (trusted by the clients)
+    # and its private key that the MITM mechanism will use.
+    #ca_key_file: ca.key
+    #ca_crt_file: ca.crt
+
+  verifier_proxies:
+  - enabled: false
