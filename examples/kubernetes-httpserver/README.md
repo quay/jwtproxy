@@ -1,42 +1,51 @@
-# HTTP Server
+# Authenticated nginx server on Kubernetes
 
-This example demonstrates authenticating a web service using jwtproxy.
+This example demonstrates authenticating an nginx server using jwtproxy on Kubernetes.
 
-```
-client <--> signer proxy <--> verifier proxy <--> web service
-```
-
-Three components are deployed using the Procfile contained in this example folder:
-- **A simple web server**: The web server provides a web service on which we want to add authentication.
-- **A forward proxy**: Used by the web service clients, the proxy signs every requests to our web service by adding a JWT.
-- **A reverse proxy**: The reverse proxy receives requests, validates JWTs and forwards the requests to the web server.
+In this example, we will deploy a pod that contains a unexposed nginx server and a verifier proxy, exposed on the port 80. Because the nginx server is unexposed, the only way to access it externally (i.e. outside the pod) is to go through the reverse proxy, which enforce authentication by validating JWTs. A service will also be created to enable external access (i.e. outside the cluster) to the service.
 
 ### Pre-requisites
 
-To run this example, you need [Go] and a working [Go environment] and [goreman].
+To run this example, you need a working [Kubernetes] cluster.
 
-[Go]: https://github.com/golang/go/releases
-[Go environment]: https://golang.org/doc/code.html
-[goreman]: github.com/mattn/goreman
 
-### Configuration
+For the sake of simplicity, this example uses a pre-shared key pair to sign and verify the requests.
 
-For the sake of simplicity, this example uses a pre-shared key pair to sign and verify the requests. Two configuration files are used, one for the signer and one for the verifier, respectively `signer.yaml` and `verifier.yaml`. It is recommended that you inspect them to understand how jwtproxy works.
+[Kubernetes]: http://kubernetes.io/
 
-### Run
+### Deploy
 
-Simply execute the Procfile:
+First of all, we create two Kubernetes secrets:
+- **secret-nginx-config**: Contains an nginx virtual host configuration file to make our web server listen on port 8080 (in the pod only) and serve a static response,
+- **secret-jwtproxy-config**: Contains the verifier proxy configuration that will listen on port 80 (externally), verify requests' authentication and forward them to nginx.
 
 ```
-goreman start
+$ kubectl create secret generic secret-nginx-config --from-file nginx.conf
+$ kubectl create secret generic secret-verifier-config --from-file verifier.yaml --from-file mykey.pub
+```
+
+And then, we deploy the pod and service that expose our secured web service:
+
+```
+$ kubectl create -f nginx-app.yaml
 ```
 
 ### Test
 
-Using curl, we send a request for the web service to the verifier proxy address. The verifier proxy will verify the authentication token and forward it upon success to our web service. We also specify that a forward proxy has to be used - it will sign our requests.
+To demonstrate a bit further, we'll deploy a second pod that will send requests to our web service at regular intervals, via a signer proxy that will provide authentication.
 
 ```
-curl --proxy localhost:3128 http://localhost:8080/
+$ kubectl create secret generic secret-tester-config --from-file signer.yaml --from-file mykey.key
+$ kubectl create -f tester-app.yaml
+```
+
+As soon as the pod is deployed, we can watch the logs and read the responses to our authenticated requests.
+
+```
+$ kubectl logs -f tester tester
+Welcome to this authenticated web service.
+Welcome to this authenticated web service.
+Welcome to this authenticated web service.
 ```
 
 ### Learn more

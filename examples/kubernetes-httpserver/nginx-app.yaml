@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: nginx
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  volumes:
+  - name: secret-nginx-volume
+    secret:
+      secretName: secret-nginx-config
+  - name: secret-verifier-volume
+    secret:
+      secretName: secret-verifier-config
+  containers:
+  - name: nginx
+    image: nginx
+    volumeMounts:
+    - mountPath: /etc/nginx/conf.d/
+      name: secret-nginx-volume
+  - name: jwtproxy
+    image: quay.io/coreos/jwtproxy
+    ports:
+    - containerPort: 80
+    args:
+    - -config
+    - /etc/jwtproxy/verifier.yaml
+    volumeMounts:
+    - mountPath: /etc/jwtproxy/
+      name: secret-verifier-volume

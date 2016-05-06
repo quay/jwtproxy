@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tester
+spec:
+  volumes:
+  - name: secret-tester-volume
+    secret:
+      secretName: secret-tester-config
+  containers:
+  - name: jwtproxy
+    image: quay.io/coreos/jwtproxy
+    args:
+    - -config
+    - /etc/jwtproxy/signer.yaml
+    volumeMounts:
+    - mountPath: /etc/jwtproxy/
+      name: secret-tester-volume
+  - name: tester
+    image: alpine:edge
+    command:
+    - sh
+    - -c
+    - while :; do http_proxy=http://localhost:3128 wget -qO- -Y on http://nginx/; sleep 5; done
