@@ -59,7 +59,7 @@ func StartForwardProxy(fpConfig config.SignerProxyConfig, stopper *stop.Group, a
 	}
 
 	// Create forward proxy.
-	forwardProxy, err := proxy.NewProxy(signer.Handler, fpConfig.CAKeyFile, fpConfig.CACrtFile, fpConfig.TrustedCertificates)
+	forwardProxy, err := proxy.NewProxy(signer.Handler, fpConfig.CAKeyFile, fpConfig.CACrtFile, fpConfig.InsecureSkipVerify, fpConfig.TrustedCertificates)
 	if err != nil {
 		stopper.Add(signer)
 		abort <- fmt.Errorf("Failed to create forward proxy: %s", err)

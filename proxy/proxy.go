@@ -104,7 +104,7 @@ func (proxy *Proxy) Stop() <-chan struct{} {
 	return stop.AlreadyDone
 }
 
-func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertificatePaths []string) (*Proxy, error) {
+func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, insecureSkipVerify bool, trustedCertificatePaths []string) (*Proxy, error) {
 	var err error
 
 	// Initialize the forward proxy's MITM handler using the specified CA key pair.
@@ -121,7 +121,7 @@ func NewProxy(proxyHandler Handler, caKeyPath, caCertPath string, trustedCertifi
 
 	// Create a forward proxy.
 	proxy := goproxy.NewProxyHttpServer()
-	proxy.Tr, err = setupClientTransport(trustedCertificatePaths)
+	proxy.Tr, err = setupClientTransport(insecureSkipVerify, trustedCertificatePaths)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func setupMITMHandler(caKeyPath, caCertPath string) (goproxy.FuncHttpsHandler, e
 	}, nil
 }
 
-func rejectMITMHandler() (goproxy.FuncHttpsHandler) {
+func rejectMITMHandler() goproxy.FuncHttpsHandler {
 	return func(host string, ctx *goproxy.ProxyCtx) (*goproxy.ConnectAction, string) {
 		return &goproxy.ConnectAction{
 			Action: goproxy.ConnectReject,
@@ -168,8 +168,8 @@ func rejectMITMHandler() (goproxy.FuncHttpsHandler) {
 	}
 }
 
-func setupClientTransport(certificatePaths []string) (*http.Transport, error) {
-	tlsConfig := new(tls.Config)
+func setupClientTransport(insecureSkipVerify bool, certificatePaths []string) (*http.Transport, error) {
+	tlsConfig := &tls.Config{InsecureSkipVerify: insecureSkipVerify}
 
 	// If any certificates are specified, load them. Otherwise, system-wide certificates are to be
 	// used.

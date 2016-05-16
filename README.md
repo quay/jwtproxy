@@ -89,6 +89,9 @@ jwtproxy:
     # This is optional. Specifying it currently replaces system root certificates entirely.
     trusted_certificates: <[]string|system root certificates>
 
+    # Whether the remotes' certificate chain and host name should be verified.
+    insecure_skip_verify: <bool|false>
+
     signer:
       # Signing service name
       issuer: <string|nil>
