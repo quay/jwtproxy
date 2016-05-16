@@ -85,7 +85,7 @@ func RegisterManager(name string, mc ManagerConstructor) {
 func NewManager(cfg config.RegistrableComponentConfig, signerParams config.SignerParams) (Manager, error) {
 	mc, ok := managers[cfg.Type]
 	if !ok {
-		return nil, fmt.Errorf("server: unknown ReaderConstructor %q (forgotten import?)", cfg.Type)
+		return nil, fmt.Errorf("server: unknown ManagerConstructor %q (forgotten import?)", cfg.Type)
 	}
 	return mc(cfg, signerParams)
 }

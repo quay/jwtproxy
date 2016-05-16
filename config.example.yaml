@@ -28,6 +28,9 @@ jwtproxy:
     trusted_certificates:
     - localhost.crt
 
+    # Whether the remotes' certificate chain and host name should be verified.
+    insecure_skip_verify: false
+
     signer:
       issuer: jwtproxy
       expiration_time: 5m

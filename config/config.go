@@ -108,6 +108,7 @@ type SignerProxyConfig struct {
 	CAKeyFile           string        `yaml:"ca_key_file"`
 	CACrtFile           string        `yaml:"ca_crt_file"`
 	TrustedCertificates []string      `yaml:"trusted_certificates"`
+	InsecureSkipVerify  bool          `yaml:"insecure_skip_verify"`
 	Signer              SignerConfig  `yaml:"signer"`
 }
 
