@@ -17,7 +17,7 @@ To run this example, you need [Go] and a working [Go environment] and [goreman].
 
 [Go 1.6]: https://github.com/golang/go/releases
 [Go environment]: https://golang.org/doc/code.html
-[goreman]: github.com/mattn/goreman
+[goreman]: https://github.com/mattn/goreman
 
 ### Configuration
 
