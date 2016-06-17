@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/quentin-m/goproxy"
+	"github.com/coreos/goproxy"
 
 	"github.com/coreos/jwtproxy/config"
 	"github.com/coreos/jwtproxy/jwt/claims"

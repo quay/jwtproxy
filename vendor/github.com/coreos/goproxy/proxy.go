@@ -107,12 +107,16 @@ func (proxy *ProxyHttpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			proxy.NonproxyHandler.ServeHTTP(w, r)
 			return
 		}
-
 		r, resp := proxy.filterRequest(r, ctx)
 
 		if resp == nil {
 			if proxy.isReverseProxy && (r.URL.Scheme == "" || r.URL.Host == "") {
 				panic("ReverseProxy did not rewrite request's Scheme or Host")
+			}
+
+			if isWebSocketRequest(r) {
+				ctx.Logf("Request looks like websocket upgrade.")
+				proxy.serveWebsocket(ctx, w, r)
 			}
 
 			removeProxyHeaders(ctx, r)
