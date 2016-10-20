@@ -1,0 +1,60 @@
+package: github.com/coreos/jwtproxy
+import:
+- package: github.com/Sirupsen/logrus
+  version: ^0.10.0
+- package: github.com/coreos/go-oidc
+  version: f427f54ef96beaa1db5fabbe4fff00de535d5494
+  subpackages:
+  - http
+  - jose
+  - key
+  - oauth2
+  - oidc
+- package: github.com/coreos/go-systemd
+  version: ^5.0.0
+  subpackages:
+  - journal
+- package: github.com/coreos/goproxy
+  version: d49035e9433ee1038960c346999fdcb12e8704b5
+- package: github.com/coreos/pkg
+  version: 1914e367e85eaf0c25d495b48e060dfe6190f8d0
+  subpackages:
+  - capnslog
+  - health
+  - httputil
+  - timeutil
+- package: github.com/davecgh/go-spew
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  subpackages:
+  - spew
+- package: github.com/gregjones/httpcache
+  version: 4b02602f71f4346dfbd3ef8f4d15cc2a318b32c1
+- package: github.com/jonboulle/clockwork
+  version: ed104f61ea4877bea08af6f759805674861e968d
+- package: github.com/patrickmn/go-cache
+  version: ^2.0.0
+- package: github.com/pmezard/go-difflib
+  version: ^1.0.0
+  subpackages:
+  - difflib
+- package: github.com/stretchr/testify
+  version: c5d7a69bf8a2c9c374798160849c071093e41dd1
+  subpackages:
+  - assert
+- package: github.com/tylerb/graceful
+  version: ^1.2.5
+- package: golang.org/x/net
+  version: 024ed629fd292398cfd43c9678a5bf004f7defdc
+  subpackages:
+  - netutil
+- package: golang.org/x/sys
+  version: a60af9cbbc6ab800af4f2be864a31f423a0ae1f2
+  subpackages:
+  - unix
+- package: gopkg.in/square/go-jose.v2
+  version: 77e6c51d4de65c9a8d5a27a99e0e2721b12f1a2c
+  subpackages:
+  - cipher
+  - json
+- package: gopkg.in/yaml.v2
+  version: a83829b6f1293c91addabc89d0571c246397bbf4
