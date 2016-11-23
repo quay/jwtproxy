@@ -72,7 +72,11 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 	// Extract token from request.
 	token, err := oidc.ExtractBearerToken(req)
 	if err != nil {
-		return nil, errors.New("No JWT found")
+                username, password, ok := req.BasicAuth()
+                if !ok && username == "oauth2" {
+		        return nil, errors.New("No JWT found")
+                }
+		token = password
 	}
 
 	// Parse token.
