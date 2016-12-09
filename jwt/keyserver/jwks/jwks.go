@@ -16,13 +16,16 @@ package jwks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"path"
 	"sync"
+	"time"
 
+	"github.com/coreos/go-oidc/jose"
 	"github.com/coreos/go-oidc/key"
 	"github.com/gregjones/httpcache"
 	"gopkg.in/yaml.v2"
@@ -78,14 +81,20 @@ func (krc *client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 	}
 
 	// Decode the public key we received as a JSON-encoded JWK.
-	var pk key.PublicKey
+	var d struct {
+		Keys []jose.JWK `json:"keys"`
+	}
 	jsonDecoder := json.NewDecoder(resp.Body)
-	err = jsonDecoder.Decode(&pk)
+	err = jsonDecoder.Decode(&d)
 	if err != nil {
 		return nil, err
 	}
+	if len(d.Keys) == 0 {
+		return nil, errors.New("zero keys in response")
+	}
+	ks := key.NewPublicKeySet(d.Keys, time.Now())
 
-	return &pk, nil
+	return ks.Key(keyID), nil
 }
 
 func (krc *client) Stop() <-chan struct{} {
