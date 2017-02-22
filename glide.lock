@@ -1,0 +1,62 @@
+hash: 84d7fab7c8e5b962b3d3373b92d31cee43d30fabf01c95bfe445d92a0aad1982
+updated: 2017-02-22T15:37:06.235178797-08:00
+imports:
+- name: github.com/coreos/go-oidc
+  version: f427f54ef96beaa1db5fabbe4fff00de535d5494
+  subpackages:
+  - http
+  - jose
+  - key
+  - oauth2
+  - oidc
+- name: github.com/coreos/go-systemd
+  version: 7b2428fec40033549c68f54e26e89e7ca9a9ce31
+  subpackages:
+  - journal
+- name: github.com/coreos/goproxy
+  version: 25fe2597a3d151ba954d9b3c0fd4663e79de48cc
+- name: github.com/coreos/pkg
+  version: 1914e367e85eaf0c25d495b48e060dfe6190f8d0
+  subpackages:
+  - capnslog
+  - health
+  - httputil
+  - timeutil
+- name: github.com/davecgh/go-spew
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  subpackages:
+  - spew
+- name: github.com/gregjones/httpcache
+  version: 4b02602f71f4346dfbd3ef8f4d15cc2a318b32c1
+- name: github.com/jonboulle/clockwork
+  version: ed104f61ea4877bea08af6f759805674861e968d
+- name: github.com/patrickmn/go-cache
+  version: 1881a9bccb818787f68c52bfba648c6cf34c34fa
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
+- name: github.com/Sirupsen/logrus
+  version: c078b1e43f58d563c74cebe63c85789e76ddb627
+- name: github.com/stretchr/testify
+  version: c5d7a69bf8a2c9c374798160849c071093e41dd1
+  subpackages:
+  - assert
+- name: github.com/tylerb/graceful
+  version: 4654dfbb6ad53cb5e27f37d99b02e16c1872fbbb
+- name: golang.org/x/net
+  version: 024ed629fd292398cfd43c9678a5bf004f7defdc
+  subpackages:
+  - netutil
+- name: golang.org/x/sys
+  version: a60af9cbbc6ab800af4f2be864a31f423a0ae1f2
+  subpackages:
+  - unix
+- name: gopkg.in/square/go-jose.v2
+  version: 77e6c51d4de65c9a8d5a27a99e0e2721b12f1a2c
+  subpackages:
+  - cipher
+  - json
+- name: gopkg.in/yaml.v2
+  version: a83829b6f1293c91addabc89d0571c246397bbf4
+testImports: []

@@ -15,7 +15,7 @@ import:
   subpackages:
   - journal
 - package: github.com/coreos/goproxy
-  version: d49035e9433ee1038960c346999fdcb12e8704b5
+  version: 25fe2597a3d151ba954d9b3c0fd4663e79de48cc
 - package: github.com/coreos/pkg
   version: 1914e367e85eaf0c25d495b48e060dfe6190f8d0
   subpackages:
