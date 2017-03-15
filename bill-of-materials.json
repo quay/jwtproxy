@@ -1,0 +1,72 @@
+[
+	{
+		"project": "github.com/coreos/jwtproxy",
+		"license": "Apache License 2.0",
+		"confidence": 1
+	},
+	{
+		"project": "github.com/Sirupsen/logrus",
+		"license": "MIT License",
+		"confidence": 1
+	},
+	{
+		"project": "github.com/coreos/go-oidc",
+		"license": "Apache License 2.0",
+		"confidence": 1
+	},
+	{
+		"project": "github.com/coreos/go-systemd/journal",
+		"license": "Apache License 2.0",
+		"confidence": 0.997
+	},
+	{
+		"project": "github.com/coreos/goproxy",
+		"license": "BSD 3-clause \"New\" or \"Revised\" License",
+		"confidence": 0.966
+	},
+	{
+		"project": "github.com/coreos/pkg",
+		"license": "Apache License 2.0",
+		"confidence": 1
+	},
+	{
+		"project": "github.com/gregjones/httpcache",
+		"license": "MIT License",
+		"confidence": 0.989
+	},
+	{
+		"project": "github.com/jonboulle/clockwork",
+		"license": "Apache License 2.0",
+		"confidence": 1
+	},
+	{
+		"project": "github.com/patrickmn/go-cache",
+		"license": "MIT License",
+		"confidence": 0.989
+	},
+	{
+		"project": "github.com/tylerb/graceful",
+		"license": "MIT License",
+		"confidence": 1
+	},
+	{
+		"project": "golang.org/x/net/netutil",
+		"license": "BSD 3-clause \"New\" or \"Revised\" License",
+		"confidence": 0.966
+	},
+	{
+		"project": "gopkg.in/square/go-jose.v2/cipher",
+		"license": "Apache License 2.0",
+		"confidence": 1
+	},
+	{
+		"project": "gopkg.in/square/go-jose.v2/json",
+		"license": "BSD 3-clause \"New\" or \"Revised\" License",
+		"confidence": 0.966
+	},
+	{
+		"project": "gopkg.in/yaml.v2",
+		"license": "GNU Lesser General Public License v3.0",
+		"confidence": 0.953
+	}
+]
