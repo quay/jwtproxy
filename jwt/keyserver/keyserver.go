@@ -28,7 +28,6 @@ import (
 var (
 	ErrPublicKeyNotFound = errors.New("Could not find any matching public key")
 	ErrPublicKeyExpired  = errors.New("Key has expired.")
-	ErrUnkownResponse    = errors.New("Unexpected response.")
 )
 
 type ReaderConstructor func(config.RegistrableComponentConfig) (Reader, error)

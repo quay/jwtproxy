@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -79,7 +80,13 @@ func (krc *client) GetPublicKey(issuer string, keyID string) (*key.PublicKey, er
 		case http.StatusForbidden:
 			return nil, keyserver.ErrPublicKeyExpired
 		default:
-			return nil, keyserver.ErrUnkownResponse
+			bodyBytes, bodyErr := ioutil.ReadAll(resp.Body)
+			if bodyErr != nil {
+				bodyBytes = []byte{}
+			}
+
+			rerr := fmt.Errorf("Got unexpected response from key server: %v: %s", resp.StatusCode, string(bodyBytes))
+			return nil, rerr
 		}
 	}
 

@@ -93,8 +93,8 @@ func constructor(registrableComponentConfig config.RegistrableComponentConfig, s
 				log.Debug("Public Key not found - generating a new key")
 			case keyserver.ErrPublicKeyExpired:
 				log.WithError(err).Fatal("Public key has expired; delete or renew it.")
-			case keyserver.ErrUnkownResponse:
-				log.WithError(err).Fatal("Uknown response from the keyserver.")
+			default:
+				log.WithError(err).Fatal(err.Error())
 			}
 		}
 	} else {
