@@ -18,6 +18,7 @@ package jose
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -112,7 +113,7 @@ func ParseEncrypted(input string) (*JSONWebEncryption, error) {
 // parseEncryptedFull parses a message in compact format.
 func parseEncryptedFull(input string) (*JSONWebEncryption, error) {
 	var parsed rawJSONWebEncryption
-	err := UnmarshalJSON([]byte(input), &parsed)
+	err := json.Unmarshal([]byte(input), &parsed)
 	if err != nil {
 		return nil, err
 	}
@@ -128,13 +129,19 @@ func (parsed *rawJSONWebEncryption) sanitized() (*JSONWebEncryption, error) {
 	}
 
 	// Check that there is not a nonce in the unprotected headers
-	if (parsed.Unprotected != nil && parsed.Unprotected.Nonce != "") ||
-		(parsed.Header != nil && parsed.Header.Nonce != "") {
-		return nil, ErrUnprotectedNonce
+	if parsed.Unprotected != nil {
+		if nonce := parsed.Unprotected.getNonce(); nonce != "" {
+			return nil, ErrUnprotectedNonce
+		}
+	}
+	if parsed.Header != nil {
+		if nonce := parsed.Header.getNonce(); nonce != "" {
+			return nil, ErrUnprotectedNonce
+		}
 	}
 
 	if parsed.Protected != nil && len(parsed.Protected.bytes()) > 0 {
-		err := UnmarshalJSON(parsed.Protected.bytes(), &obj.protected)
+		err := json.Unmarshal(parsed.Protected.bytes(), &obj.protected)
 		if err != nil {
 			return nil, fmt.Errorf("square/go-jose: invalid protected header: %s, %s", err, parsed.Protected.base64())
 		}
@@ -142,7 +149,12 @@ func (parsed *rawJSONWebEncryption) sanitized() (*JSONWebEncryption, error) {
 
 	// Note: this must be called _after_ we parse the protected header,
 	// otherwise fields from the protected header will not get picked up.
-	obj.Header = obj.mergedHeaders(nil).sanitized()
+	var err error
+	mergedHeaders := obj.mergedHeaders(nil)
+	obj.Header, err = mergedHeaders.sanitized()
+	if err != nil {
+		return nil, fmt.Errorf("square/go-jose: cannot sanitize merged headers: %v (%v)", err, mergedHeaders)
+	}
 
 	if len(parsed.Recipients) == 0 {
 		obj.recipients = []recipientInfo{
@@ -160,7 +172,7 @@ func (parsed *rawJSONWebEncryption) sanitized() (*JSONWebEncryption, error) {
 			}
 
 			// Check that there is not a nonce in the unprotected header
-			if parsed.Recipients[r].Header != nil && parsed.Recipients[r].Header.Nonce != "" {
+			if parsed.Recipients[r].Header != nil && parsed.Recipients[r].Header.getNonce() != "" {
 				return nil, ErrUnprotectedNonce
 			}
 
@@ -171,7 +183,7 @@ func (parsed *rawJSONWebEncryption) sanitized() (*JSONWebEncryption, error) {
 
 	for _, recipient := range obj.recipients {
 		headers := obj.mergedHeaders(&recipient)
-		if headers.Alg == "" || headers.Enc == "" {
+		if headers.getAlgorithm() == "" || headers.getEncryption() == "" {
 			return nil, fmt.Errorf("square/go-jose: message is missing alg/enc headers")
 		}
 	}

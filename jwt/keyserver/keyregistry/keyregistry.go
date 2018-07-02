@@ -32,10 +32,10 @@ import (
 	"github.com/gregjones/httpcache"
 	"gopkg.in/yaml.v2"
 
-	"github.com/coreos/jwtproxy/config"
-	"github.com/coreos/jwtproxy/jwt"
-	"github.com/coreos/jwtproxy/jwt/keyserver"
-	"github.com/coreos/jwtproxy/jwt/keyserver/keyregistry/keycache"
+	"github.com/eclipse-che-staging/jwtproxy/config"
+	"github.com/eclipse-che-staging/jwtproxy/jwt"
+	"github.com/eclipse-che-staging/jwtproxy/jwt/keyserver"
+	"github.com/eclipse-che-staging/jwtproxy/jwt/keyserver/keyregistry/keycache"
 )
 
 func init() {
