@@ -31,9 +31,9 @@ import (
 	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/yaml.v2"
 
-	"github.com/coreos/jwtproxy/config"
-	"github.com/coreos/jwtproxy/jwt/keyserver"
-	"github.com/coreos/jwtproxy/jwt/privatekey"
+	"github.com/eclipse-che-staging/jwtproxy/config"
+	"github.com/eclipse-che-staging/jwtproxy/jwt/keyserver"
+	"github.com/eclipse-che-staging/jwtproxy/jwt/privatekey"
 )
 
 func init() {
