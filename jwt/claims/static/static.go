@@ -22,9 +22,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/jose"
 
-	"github.com/coreos/jwtproxy/config"
-	"github.com/coreos/jwtproxy/jwt/claims"
-	"github.com/coreos/jwtproxy/stop"
+	"github.com/eclipse-che-staging/jwtproxy/config"
+	"github.com/eclipse-che-staging/jwtproxy/jwt/claims"
+	"github.com/eclipse-che-staging/jwtproxy/stop"
 )
 
 func init() {
