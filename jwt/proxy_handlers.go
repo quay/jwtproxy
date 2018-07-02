@@ -25,13 +25,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/goproxy"
 
-	"github.com/coreos/jwtproxy/config"
-	"github.com/coreos/jwtproxy/jwt/claims"
-	"github.com/coreos/jwtproxy/jwt/keyserver"
-	"github.com/coreos/jwtproxy/jwt/noncestorage"
-	"github.com/coreos/jwtproxy/jwt/privatekey"
-	"github.com/coreos/jwtproxy/proxy"
-	"github.com/coreos/jwtproxy/stop"
+	"github.com/eclipse-che-staging/jwtproxy/config"
+	"github.com/eclipse-che-staging/jwtproxy/jwt/claims"
+	"github.com/eclipse-che-staging/jwtproxy/jwt/keyserver"
+	"github.com/eclipse-che-staging/jwtproxy/jwt/noncestorage"
+	"github.com/eclipse-che-staging/jwtproxy/jwt/privatekey"
+	"github.com/eclipse-che-staging/jwtproxy/proxy"
+	"github.com/eclipse-che-staging/jwtproxy/stop"
 )
 
 type StoppableProxyHandler struct {

@@ -1,0 +1,42 @@
+[[constraint]]
+  name = "github.com/Sirupsen/logrus"
+  version = "=0.11.5"
+
+[[constraint]]
+  revision = "25fe2597a3d151ba954d9b3c0fd4663e79de48cc"
+  name = "github.com/coreos/goproxy"
+
+[[constraint]]
+  revision="a93f71fdfe73d2c0f5413c0565eea0af6523a6df"
+  name = "github.com/coreos/go-oidc"
+
+
+[[constraint]]
+  revision="9cad4c3443a7200dd6400aef47183728de563a38"
+  name = "github.com/gregjones/httpcache"
+
+[[constraint]]
+  name = "github.com/patrickmn/go-cache"
+  version = "=2.1.0"
+
+[[constraint]]
+  name = "github.com/tylerb/graceful"
+  version = "=1.2.15"
+
+[[constraint]]
+  name = "gopkg.in/yaml.v2"
+  version = "=v2.2.1"
+
+
+[[constraint]]
+  name = "github.com/stretchr/testify"
+  version = "=v1.2.2"
+
+
+[[constraint]]
+  name = "gopkg.in/square/go-jose.v2"
+  version = "=v2.1.6"
+
+[prune]
+  go-tests = true
+  unused-packages = true

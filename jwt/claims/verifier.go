@@ -20,8 +20,8 @@ import (
 
 	"github.com/coreos/go-oidc/jose"
 
-	"github.com/coreos/jwtproxy/config"
-	"github.com/coreos/jwtproxy/stop"
+	"github.com/eclipse-che-staging/jwtproxy/config"
+	"github.com/eclipse-che-staging/jwtproxy/stop"
 )
 
 type Constructor func(config.RegistrableComponentConfig) (Verifier, error)

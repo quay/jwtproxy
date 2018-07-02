@@ -292,5 +292,5 @@ Also, because the key pair is self-signed, the certificate must be trusted by th
 
 ```
 docker build -t jwtproxy .
-docker run -it --rm -v "$PWD/bin":/go/bin -w /go --entrypoint /bin/bash jwtproxy -c "go install -v github.com/coreos/jwtproxy/cmd/jwtproxy"
+docker run -it --rm -v "$PWD/bin":/go/bin -w /go --entrypoint /bin/bash jwtproxy -c "go install -v github.com/eclipse-che-staging/jwtproxy/cmd/jwtproxy"
 ```

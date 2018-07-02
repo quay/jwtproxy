@@ -21,8 +21,8 @@ import (
 
 	"github.com/coreos/go-oidc/key"
 
-	"github.com/coreos/jwtproxy/config"
-	"github.com/coreos/jwtproxy/stop"
+	"github.com/eclipse-che-staging/jwtproxy/config"
+	"github.com/eclipse-che-staging/jwtproxy/stop"
 )
 
 var (
