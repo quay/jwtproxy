@@ -196,6 +196,7 @@ func setupClientTransport(insecureSkipVerify bool, certificatePaths []string) (*
 		//
 		// [1]: https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility
 		// [2]: https://github.com/golang/go/commit/48d8edb5b21db190f717e035b4d9ab61a077f9d7
+		PreferServerCipherSuites: true,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
