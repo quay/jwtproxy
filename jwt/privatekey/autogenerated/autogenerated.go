@@ -26,8 +26,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/key"
+	log "github.com/sirupsen/logrus"
 	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/yaml.v2"
 

@@ -22,10 +22,10 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/jose"
 	"github.com/coreos/go-oidc/key"
 	"github.com/coreos/go-oidc/oidc"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/coreos/jwtproxy/config"
 	"github.com/coreos/jwtproxy/jwt/keyserver"

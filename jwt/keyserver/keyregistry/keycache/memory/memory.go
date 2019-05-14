@@ -15,8 +15,8 @@
 package memory
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/gregjones/httpcache"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/coreos/jwtproxy/config"
 	"github.com/coreos/jwtproxy/jwt/keyserver/keyregistry/keycache"

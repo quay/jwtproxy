@@ -1,5 +1,5 @@
-hash: 84d7fab7c8e5b962b3d3373b92d31cee43d30fabf01c95bfe445d92a0aad1982
-updated: 2017-02-22T15:37:06.235178797-08:00
+hash: e9be2167eed774041b7d368bb6054c64cdb94699fa91b7beffb739c50f4cf583
+updated: 2019-05-14T12:30:21.525021-04:00
 imports:
 - name: github.com/coreos/go-oidc
   version: f427f54ef96beaa1db5fabbe4fff00de535d5494
@@ -31,13 +31,13 @@ imports:
 - name: github.com/jonboulle/clockwork
   version: ed104f61ea4877bea08af6f759805674861e968d
 - name: github.com/patrickmn/go-cache
-  version: 1881a9bccb818787f68c52bfba648c6cf34c34fa
+  version: a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
-- name: github.com/Sirupsen/logrus
-  version: c078b1e43f58d563c74cebe63c85789e76ddb627
+- name: github.com/sirupsen/logrus
+  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: github.com/stretchr/testify
   version: c5d7a69bf8a2c9c374798160849c071093e41dd1
   subpackages:

@@ -5,7 +5,7 @@
 		"confidence": 1
 	},
 	{
-		"project": "github.com/Sirupsen/logrus",
+		"project": "github.com/sirupsen/logrus",
 		"license": "MIT License",
 		"confidence": 1
 	},

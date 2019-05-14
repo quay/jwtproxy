@@ -27,9 +27,9 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/key"
 	"github.com/gregjones/httpcache"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
 	"github.com/coreos/jwtproxy/config"
