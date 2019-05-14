@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/coreos/jwtproxy/config"
 	"github.com/coreos/jwtproxy/jwt"

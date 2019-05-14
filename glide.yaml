@@ -1,6 +1,6 @@
 package: github.com/coreos/jwtproxy
 import:
-- package: github.com/Sirupsen/logrus
+- package: github.com/sirupsen/logrus
   version: ^0.10.0
 - package: github.com/coreos/go-oidc
   version: f427f54ef96beaa1db5fabbe4fff00de535d5494

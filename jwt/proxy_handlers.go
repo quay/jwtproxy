@@ -22,8 +22,8 @@ import (
 	"net/url"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/goproxy"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/coreos/jwtproxy/config"
 	"github.com/coreos/jwtproxy/jwt/claims"

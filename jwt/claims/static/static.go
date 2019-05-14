@@ -19,8 +19,8 @@ import (
 	"net/http"
 	"reflect"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/jose"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/coreos/jwtproxy/config"
 	"github.com/coreos/jwtproxy/jwt/claims"
