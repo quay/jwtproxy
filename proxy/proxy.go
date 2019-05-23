@@ -118,6 +118,8 @@ func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout t
 			return err
 		}
 
+		os.Chmod(unixFile, 0777)
+
 		defer os.Remove(unixFile)
 	} else {
 		if crtFile != "" && keyFile != "" {
