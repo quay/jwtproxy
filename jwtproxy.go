@@ -16,6 +16,7 @@ package jwtproxy
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -74,6 +75,7 @@ func StartForwardProxy(fpConfig config.SignerProxyConfig, stopper *stop.Group, a
 		fpConfig.ShutdownTimeout,
 		"forward",
 		forwardProxy,
+		fpConfig.SocketPermission,
 	)
 
 	forwardStopper := func() <-chan struct{} {
@@ -115,6 +117,7 @@ func StartReverseProxy(rpConfig config.VerifierProxyConfig, stopper *stop.Group,
 		rpConfig.ShutdownTimeout,
 		"reverse",
 		reverseProxy,
+		rpConfig.SocketPermission,
 	)
 
 	reverseStopper := func() <-chan struct{} {
@@ -129,10 +132,10 @@ func StartReverseProxy(rpConfig config.VerifierProxyConfig, stopper *stop.Group,
 	stopper.AddFunc(reverseStopper)
 }
 
-func startProxy(abort chan<- error, listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration, proxyName string, proxy *proxy.Proxy) {
+func startProxy(abort chan<- error, listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration, proxyName string, proxy *proxy.Proxy, socketPermission os.FileMode) {
 	go func() {
 		log.Infof("Starting %s proxy (Listening on '%s')", proxyName, listenAddr)
-		if err := proxy.Serve(listenAddr, crtFile, keyFile, shutdownTimeout); err != nil {
+		if err := proxy.Serve(listenAddr, crtFile, keyFile, shutdownTimeout, socketPermission); err != nil {
 			failedToStart := fmt.Errorf("Failed to start %s proxy: %s", proxyName, err)
 			abort <- failedToStart
 		}

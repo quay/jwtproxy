@@ -88,7 +88,7 @@ type Proxy struct {
 	started         bool
 }
 
-func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration) error {
+func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout time.Duration, socketPermission os.FileMode) error {
 	tlsConfig := defaultTLSConfig
 
 	// Create a graceful server.
@@ -118,7 +118,7 @@ func (proxy *Proxy) Serve(listenAddr, crtFile, keyFile string, shutdownTimeout t
 			return err
 		}
 
-		os.Chmod(unixFile, 0777)
+		os.Chmod(unixFile, socketPermission)
 
 		defer os.Remove(unixFile)
 	} else {
