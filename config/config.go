@@ -58,6 +58,7 @@ func (cfg *VerifierProxyConfig) UnmarshalYAML(unmarshal func(interface{}) error)
 	tempCfg := DefaultVerifierProxyConfig{
 		Enabled:         true,
 		ListenAddr:      ":8082",
+		SocketPermission: 0755,
 		ShutdownTimeout: 5 * time.Second,
 		Verifier: VerifierConfig{
 			MaxSkew: 5 * time.Minute,
@@ -95,6 +96,7 @@ type Config struct {
 type VerifierProxyConfig struct {
 	Enabled         bool           `yaml:"enabled"`
 	ListenAddr      string         `yaml:"listen_addr"`
+	SocketPermission os.FileMode   `yaml:"socket_permission"`
 	ShutdownTimeout time.Duration  `yaml:"shutdown_timeout"`
 	CrtFile         string         `yaml:"crt_file"`
 	KeyFile         string         `yaml:"key_file"`
@@ -104,6 +106,7 @@ type VerifierProxyConfig struct {
 type SignerProxyConfig struct {
 	Enabled             bool          `yaml:"enabled"`
 	ListenAddr          string        `yaml:"listen_addr"`
+	SocketPermission    os.FileMode   `yaml:"socket_permission"`
 	ShutdownTimeout     time.Duration `yaml:"shutdown_timeout"`
 	CAKeyFile           string        `yaml:"ca_key_file"`
 	CACrtFile           string        `yaml:"ca_crt_file"`
@@ -145,6 +148,7 @@ func DefaultConfig() Config {
 		SignerProxy: SignerProxyConfig{
 			Enabled:         true,
 			ListenAddr:      ":8080",
+			SocketPermission: 0755,
 			ShutdownTimeout: 5 * time.Second,
 			Signer: SignerConfig{
 				SignerParams: SignerParams{
