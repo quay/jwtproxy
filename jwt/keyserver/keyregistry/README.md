@@ -180,7 +180,7 @@ This is roughly how a client can use the publish and fetch endpoints to publish 
 5. Set the `kid` claim in our JWT headers to be the opaque ID string for our new key
 6. `PUT /services/<iss>/keys/<kid>` -> 202
 7. Poll `GET /services/<iss>/keys/<kid>` until 409 responses turn into 200
-8. Our key is not published and approved
+8. Our key is now published and approved
 
 Rotating a key:
 
