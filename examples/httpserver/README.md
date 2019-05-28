@@ -44,5 +44,5 @@ curl --proxy localhost:3128 http://localhost:8080/
 Extensive documentation can be found in the [README].
 To learn more about the different configuration parameters, you may read [config.example.yaml].
 
-[README]: ../../README
+[README]: ../../README.md
 [config.example.yaml]: ../../config.example.yaml
