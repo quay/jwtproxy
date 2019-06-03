@@ -27,3 +27,5 @@ WORKDIR /go/src/github.com/coreos/jwtproxy/
 
 RUN go install -v github.com/coreos/jwtproxy/cmd/jwtproxy
 RUN rm -r /usr/local/go
+
+EXPOSE 8080
