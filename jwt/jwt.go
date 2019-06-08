@@ -72,10 +72,10 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 	// Extract token from request.
 	token, err := oidc.ExtractBearerToken(req)
 	if err != nil {
-                username, password, ok := req.BasicAuth()
-                if !ok && username == "oauth2" {
-		        return nil, errors.New("No JWT found")
-                }
+		username, password, ok := req.BasicAuth()
+		if !ok && username == "oauth2" {
+			return nil, errors.New("No JWT found")
+		}
 		token = password
 	}
 
@@ -120,7 +120,7 @@ func Verify(req *http.Request, keyServer keyserver.Reader, nonceVerifier noncest
 		return nil, errors.New("Invalid 'exp' claim (too long)")
 	}
 	jti, exists, err := claims.StringClaim("jti")
-	if !exists || err != nil || !nonceVerifier.Verify(jti, exp) {
+	if err != nil || !nonceVerifier.Verify(jti, exp) {
 		return nil, errors.New("Missing or invalid 'jti' claim")
 	}
 

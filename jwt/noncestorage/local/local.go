@@ -54,6 +54,10 @@ func constructor(registrableComponentConfig config.RegistrableComponentConfig) (
 }
 
 func (ln *Local) Verify(nonce string, expiration time.Time) bool {
+	if nonce == "" {
+		return false
+	}
+
 	if _, found := ln.Get(nonce); found {
 		return false
 	}
