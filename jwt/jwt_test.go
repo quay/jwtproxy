@@ -28,6 +28,9 @@ import (
 	"github.com/coreos/go-oidc/key"
 	"github.com/coreos/go-oidc/oidc"
 	"github.com/coreos/jwtproxy/config"
+	"github.com/coreos/jwtproxy/jwt/noncestorage"
+	_ "github.com/coreos/jwtproxy/jwt/noncestorage/local"
+	_ "github.com/coreos/jwtproxy/jwt/noncestorage/none"
 	"github.com/coreos/jwtproxy/stop"
 	"github.com/stretchr/testify/assert"
 )
@@ -87,10 +90,7 @@ func (ts *testService) Stop() <-chan struct{} {
 	return stop.AlreadyDone
 }
 
-func TestJWT(t *testing.T) {
-	// Create a request to sign.
-	req, _ := http.NewRequest("GET", "http://foo.bar:6666/ez", nil)
-
+func setup(t *testing.T) *signAndVerifyParams {
 	// Create a public/private key pair used to sign/verify.
 	pkb, _ := pem.Decode([]byte(privateKey))
 	pkr, _ := x509.ParsePKCS1PrivateKey(pkb.Bytes)
@@ -122,6 +122,15 @@ func TestJWT(t *testing.T) {
 		maxSkew: time.Minute,
 		maxTTL:  5 * time.Minute,
 	}
+
+	return defaultConfig
+}
+
+func TestJWT(t *testing.T) {
+	// Create a request to sign.
+	req, _ := http.NewRequest("GET", "http://foo.bar:6666/ez", nil)
+
+	defaultConfig := setup(t)
 
 	// Basic sign / verify.
 	assert.Nil(t, signAndVerify(t, req, *defaultConfig, nil))
@@ -201,6 +210,53 @@ func TestJWT(t *testing.T) {
 	assert.Error(t, signAndVerify(t, req, cfg, nil))
 }
 
+func TestValidateJWT(t *testing.T) {
+	cfg := setup(t)
+
+	req, _ := http.NewRequest("GET", "http://foo.bar:6666/ez", nil)
+
+	assert.Nil(t, signAndVerify(t, req, *cfg, nil))
+}
+
+func TestLocalValidateJTITwice(t *testing.T) {
+	cfg := setup(t)
+
+	local, err := noncestorage.New(config.RegistrableComponentConfig{
+		Type: "local",
+		Options: map[string]interface{}{
+			"PurgeInterval": 1 * time.Minute,
+		},
+	})
+	assert.NoError(t, err)
+
+	req, _ := http.NewRequest("GET", "http://foo.bar:6666/ez", nil)
+	sign(t, req, *cfg, nil)
+
+	_, err = Verify(req, cfg.services, local, cfg.aud, cfg.maxSkew, cfg.maxTTL)
+	assert.Nil(t, err)
+
+	//Validating same JTI twice should have error
+	_, err = Verify(req, cfg.services, local, cfg.aud, cfg.maxSkew, cfg.maxTTL)
+	assert.Error(t, err)
+}
+
+func TestNoValidateJTITwice(t *testing.T) {
+	cfg := setup(t)
+
+	local, err := noncestorage.New(config.RegistrableComponentConfig{
+		Type: "none",
+	})
+	assert.NoError(t, err)
+
+	req, _ := http.NewRequest("GET", "http://foo.bar:6666/ez", nil)
+	sign(t, req, *cfg, nil)
+
+	_, err = Verify(req, cfg.services, local, cfg.aud, cfg.maxSkew, cfg.maxTTL)
+	assert.Nil(t, err)
+	_, err = Verify(req, cfg.services, local, cfg.aud, cfg.maxSkew, cfg.maxTTL)
+	assert.Nil(t, err)
+}
+
 type signAndVerifyParams struct {
 	services *testService
 
@@ -215,7 +271,7 @@ type signAndVerifyParams struct {
 
 type requestModifier func(req *http.Request)
 
-func signAndVerify(t *testing.T, req *http.Request, p signAndVerifyParams, modify requestModifier) error {
+func sign(t *testing.T, req *http.Request, p signAndVerifyParams, modify requestModifier) {
 	// Sign.
 	pk, _ := p.services.GetPrivateKey()
 	assert.Nil(t, Sign(req, pk, p.signerParams))
@@ -224,6 +280,10 @@ func signAndVerify(t *testing.T, req *http.Request, p signAndVerifyParams, modif
 	if modify != nil {
 		modify(req)
 	}
+}
+
+func signAndVerify(t *testing.T, req *http.Request, p signAndVerifyParams, modify requestModifier) error {
+	sign(t, req, p, modify)
 
 	// Verify.
 	_, err := Verify(req, p.services, p.services, p.aud, p.maxSkew, p.maxTTL)

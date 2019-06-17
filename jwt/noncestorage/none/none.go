@@ -12,59 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package local
+package none
 
 import (
 	"time"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/coreos/jwtproxy/config"
 	"github.com/coreos/jwtproxy/jwt/noncestorage"
 	"github.com/coreos/jwtproxy/stop"
-	"github.com/patrickmn/go-cache"
 )
 
 func init() {
-	noncestorage.Register("local", constructor)
+	noncestorage.Register("none", constructor)
 }
 
-type Local struct {
-	*cache.Cache
-}
-
-type Config struct {
-	PurgeInterval time.Duration `yaml:"purge_interval"`
+// None no jti validation
+type None struct {
 }
 
 func constructor(registrableComponentConfig config.RegistrableComponentConfig) (noncestorage.NonceStorage, error) {
-	var cfg Config
-	bytes, err := yaml.Marshal(registrableComponentConfig.Options)
-	if err != nil {
-		return nil, err
-	}
-	err = yaml.Unmarshal(bytes, &cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Local{
-		Cache: cache.New(cache.NoExpiration, cfg.PurgeInterval),
-	}, nil
+	return &None{}, nil
 }
 
-func (ln *Local) Verify(nonce string, expiration time.Time) bool {
-	if nonce == "" {
-		return false
-	}
-
-	if _, found := ln.Get(nonce); found {
-		return false
-	}
-	ln.Set(nonce, struct{}{}, expiration.Sub(time.Now()))
+// Verify Always returns true
+func (ln *None) Verify(nonce string, expiration time.Time) bool {
 	return true
 }
 
-func (ln *Local) Stop() <-chan struct{} {
+// Stop already done
+func (ln *None) Stop() <-chan struct{} {
 	return stop.AlreadyDone
 }
