@@ -9,7 +9,7 @@ spec:
       secretName: secret-tester-config
   containers:
   - name: jwtproxy
-    image: quay.io/coreos/jwtproxy
+    image: quay.io/quay/jwtproxy
     args:
     - -config
     - /etc/jwtproxy/signer.yaml

@@ -32,7 +32,7 @@ spec:
     - mountPath: /etc/nginx/conf.d/
       name: secret-nginx-volume
   - name: jwtproxy
-    image: quay.io/coreos/jwtproxy
+    image: quay.io/quay/jwtproxy
     ports:
     - containerPort: 80
     args:

@@ -22,8 +22,8 @@ VOLUME /config
 ENTRYPOINT ["jwtproxy"]
 CMD ["-config", "/config/config.yaml"]
 
-ADD .   /go/src/github.com/coreos/jwtproxy/
-WORKDIR /go/src/github.com/coreos/jwtproxy/
+ADD .   /go/src/github.com/quay/jwtproxy/
+WORKDIR /go/src/github.com/quay/jwtproxy/
 
-RUN go install -v github.com/coreos/jwtproxy/cmd/jwtproxy
+RUN go install -v github.com/quay/jwtproxy/cmd/jwtproxy
 RUN rm -r /usr/local/go

@@ -21,10 +21,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/coreos/jwtproxy/config"
-	"github.com/coreos/jwtproxy/jwt"
-	"github.com/coreos/jwtproxy/proxy"
-	"github.com/coreos/jwtproxy/stop"
+	"github.com/quay/jwtproxy/config"
+	"github.com/quay/jwtproxy/jwt"
+	"github.com/quay/jwtproxy/proxy"
+	"github.com/quay/jwtproxy/stop"
 )
 
 // RunProxies is an utility function that starts both the JWT verifier and signer proxies
