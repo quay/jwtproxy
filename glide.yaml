@@ -1,4 +1,4 @@
-package: github.com/coreos/jwtproxy
+package: github.com/quay/jwtproxy
 import:
 - package: github.com/sirupsen/logrus
   version: ^0.10.0

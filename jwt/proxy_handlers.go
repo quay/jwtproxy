@@ -25,13 +25,13 @@ import (
 	"github.com/coreos/goproxy"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/coreos/jwtproxy/config"
-	"github.com/coreos/jwtproxy/jwt/claims"
-	"github.com/coreos/jwtproxy/jwt/keyserver"
-	"github.com/coreos/jwtproxy/jwt/noncestorage"
-	"github.com/coreos/jwtproxy/jwt/privatekey"
-	"github.com/coreos/jwtproxy/proxy"
-	"github.com/coreos/jwtproxy/stop"
+	"github.com/quay/jwtproxy/config"
+	"github.com/quay/jwtproxy/jwt/claims"
+	"github.com/quay/jwtproxy/jwt/keyserver"
+	"github.com/quay/jwtproxy/jwt/noncestorage"
+	"github.com/quay/jwtproxy/jwt/privatekey"
+	"github.com/quay/jwtproxy/proxy"
+	"github.com/quay/jwtproxy/stop"
 )
 
 type StoppableProxyHandler struct {

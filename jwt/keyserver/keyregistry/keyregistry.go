@@ -32,10 +32,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
-	"github.com/coreos/jwtproxy/config"
-	"github.com/coreos/jwtproxy/jwt"
-	"github.com/coreos/jwtproxy/jwt/keyserver"
-	"github.com/coreos/jwtproxy/jwt/keyserver/keyregistry/keycache"
+	"github.com/quay/jwtproxy/config"
+	"github.com/quay/jwtproxy/jwt"
+	"github.com/quay/jwtproxy/jwt/keyserver"
+	"github.com/quay/jwtproxy/jwt/keyserver/keyregistry/keycache"
 )
 
 func init() {
